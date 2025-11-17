@@ -1,7 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
-import { upsertUser } from "../db/users";
-import { generateText } from "../ai/gemini";
-import { generateImage } from "../ai/image";
+import { upsertUser } from "../db/users.js";
+import { generateText } from "../ai/gemini.js";
+import { generateImage } from "../ai/image.js";
 
 export function registerMessageHandlers(bot: TelegramBot) {
   // /start command
@@ -38,9 +38,8 @@ export function registerMessageHandlers(bot: TelegramBot) {
     });
   });
 
-  // Default text message handler
+  // Default text handler
   bot.on("message", async (ctx) => {
-    // Ignore /start and /image handling
     if (ctx.text?.startsWith("/")) return;
 
     await upsertUser(ctx.from);
