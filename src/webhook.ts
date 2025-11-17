@@ -3,6 +3,12 @@ import { bot } from "./bot/index.js";
 
 const router = Router();
 
+// Telegram webhook GET test
+router.get("/", (req, res) => {
+  res.status(200).send("Nexus Webhook Active");
+});
+
+// Telegram POST updates
 router.post("/", async (req, res) => {
   try {
     await bot.processUpdate(req.body);
