@@ -1,9 +1,12 @@
 import express from "express";
-import { json } from "body-parser";
 import router from "./webhook.js";
 
 const app = express();
-app.use(json());
+
+// Built-in JSON parser (no body-parser needed)
+app.use(express.json());
+
+// Webhook route
 app.use("/webhook", router);
 
 const PORT = process.env.PORT || 3000;
