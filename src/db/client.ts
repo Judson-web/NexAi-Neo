@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { config } from "../config";
+import { config } from "../config.js";
 
 // Supabase client with full backend privileges (service role)
 export const supabase = createClient(
