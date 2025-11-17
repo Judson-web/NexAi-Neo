@@ -2,7 +2,15 @@ import TelegramBot from "node-telegram-bot-api";
 import { upsertUser } from "../db/users.js";
 import { generateText } from "../ai/gemini.js";
 
-// Helper — split long messages safely for Telegram (max 4096 chars)
+// Escape unsafe characters so Telegram HTML never breaks
+function sanitizeHTML(text: string = ""): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// Split long messages safely for Telegram (limit 4096, we use 3500)
 function chunkText(text: string, size = 3500) {
   const parts = [];
   for (let i = 0; i < text.length; i += size) {
@@ -13,7 +21,7 @@ function chunkText(text: string, size = 3500) {
 
 export function registerMessageHandlers(bot: TelegramBot) {
 
-  // /start command — image + caption
+  // /start command — send image + caption
   bot.onText(/\/start/, async (msg) => {
     await upsertUser(msg.from);
 
@@ -43,7 +51,7 @@ Ask me anything, or try:
     );
   });
 
-  // Default chat handler
+  // Default text handler
   bot.on("message", async (msg) => {
     if (msg.text?.startsWith("/")) return;
 
@@ -52,12 +60,13 @@ Ask me anything, or try:
     const prompt = msg.text || "";
     const reply = await generateText(prompt);
 
-    const parts = chunkText(reply);
+    // Sanitize dangerous characters before sending as HTML
+    const safe = sanitizeHTML(reply);
+
+    const parts = chunkText(safe);
 
     for (const part of parts) {
-      await bot.sendMessage(msg.chat.id, part, {
-        parse_mode: "HTML"
-      });
+      await bot.sendMessage(msg.chat.id, part, { parse_mode: "HTML" });
     }
   });
 }
