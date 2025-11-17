@@ -2,15 +2,52 @@ import TelegramBot from "node-telegram-bot-api";
 import { upsertUser } from "../db/users.js";
 import { generateText } from "../ai/gemini.js";
 
-// Escape unsafe characters so Telegram HTML never breaks
-function sanitizeHTML(text: string = ""): string {
-  return text
+/* ----------------------------------------------------------
+   1. Convert Gemini Markdown → Telegram-safe HTML
+---------------------------------------------------------- */
+function formatMarkdownToHTML(text: string = ""): string {
+  if (!text) return "";
+
+  // Escape HTML first
+  let html = text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+
+  // Restore HTML tags for formatting
+  // Bold: **text**
+  html = html.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+
+  // Italic: *text* or _text_
+  html = html.replace(/(?:\*)([^*]+)(?:\*)/g, "<i>$1</i>");
+  html = html.replace(/_(.+?)_/g, "<i>$1</i>");
+
+  // Inline code: `code`
+  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+  // Code blocks: ```lang\n code ```
+  html = html.replace(/```([^`]+)```/gs, (match, code) => {
+    const clean = code.trim().replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+    return `<pre><code>${clean}</code></pre>`;
+  });
+
+  // Headings ## Title → <b>TITLE</b>
+  html = html.replace(/^### (.+)$/gm, "<b>$1</b>");
+  html = html.replace(/^## (.+)$/gm, "<b>$1</b>");
+  html = html.replace(/^# (.+)$/gm, "<b>$1</b>");
+
+  // Links: [text](url)
+  html = html.replace(/([^]+)\]([^)]+)/g, `<a href="$2">$1</a>`);
+
+  // Bullet lists → preserve formatting
+  html = html.replace(/^\* (.+)$/gm, "• $1");
+
+  return html;
 }
 
-// Split long messages safely for Telegram (limit 4096, we use 3500)
+/* ----------------------------------------------------------
+   2. Telegram message splitter (to avoid the 4096 limit)
+---------------------------------------------------------- */
 function chunkText(text: string, size = 3500) {
   const parts = [];
   for (let i = 0; i < text.length; i += size) {
@@ -19,9 +56,12 @@ function chunkText(text: string, size = 3500) {
   return parts;
 }
 
+/* ----------------------------------------------------------
+   3. Register handlers
+---------------------------------------------------------- */
 export function registerMessageHandlers(bot: TelegramBot) {
 
-  // /start command — send image + caption
+  // /start command with image + caption
   bot.onText(/\/start/, async (msg) => {
     await upsertUser(msg.from);
 
@@ -60,10 +100,11 @@ Ask me anything, or try:
     const prompt = msg.text || "";
     const reply = await generateText(prompt);
 
-    // Sanitize dangerous characters before sending as HTML
-    const safe = sanitizeHTML(reply);
+    // Convert Gemini Markdown → Telegram HTML
+    const html = formatMarkdownToHTML(reply);
 
-    const parts = chunkText(safe);
+    // Split long output
+    const parts = chunkText(html);
 
     for (const part of parts) {
       await bot.sendMessage(msg.chat.id, part, { parse_mode: "HTML" });
