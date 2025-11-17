@@ -1,4 +1,4 @@
-import { supabase } from "./client";
+import { supabase } from "./client.js";
 
 export interface TelegramUser {
   id: number;
