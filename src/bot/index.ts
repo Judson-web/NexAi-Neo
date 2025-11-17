@@ -1,24 +1,21 @@
 import TelegramBot from "node-telegram-bot-api";
-import { config } from "../config";
-import { registerMessageHandlers } from "./handlers";
-import { registerInlineHandlers } from "./inline";
+import { config } from "../config.js";
+import { registerMessageHandlers } from "./handlers.js";
+import { registerInlineHandlers } from "./inline.js";
 
-// Webhook mode must be explicitly enabled
+// Create bot in webhook mode
 export const bot = new TelegramBot(config.telegram.token, {
-  webHook: {
-    port: Number(config.server.port)
-  }
+  webHook: true
 });
 
-// Set Webhook URL (Render, Railway, etc.)
-if (config.server.webhookUrl) {
-  bot.setWebHook(`${config.server.webhookUrl}`);
-  console.log("🌐 Webhook set to:", config.server.webhookUrl);
-} else {
-  console.warn("⚠️ WEBHOOK_URL not defined. Bot will not receive updates.");
-}
+// Set full webhook URL
+const webhookUrl = `${config.server.webhookUrl}/webhook`;
 
-// Register bot features
+bot.setWebHook(webhookUrl)
+  .then(() => console.log("🌐 Webhook set:", webhookUrl))
+  .catch(err => console.error("Webhook error:", err));
+
+// Attach handlers
 registerMessageHandlers(bot);
 registerInlineHandlers(bot);
 
