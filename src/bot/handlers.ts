@@ -2,9 +2,18 @@ import TelegramBot from "node-telegram-bot-api";
 import { upsertUser } from "../db/users.js";
 import { generateText } from "../ai/gemini.js";
 
+// Helper — split long messages safely for Telegram (max 4096 chars)
+function chunkText(text: string, size = 3500) {
+  const parts = [];
+  for (let i = 0; i < text.length; i += size) {
+    parts.push(text.slice(i, i + size));
+  }
+  return parts;
+}
+
 export function registerMessageHandlers(bot: TelegramBot) {
 
-  // /start command — single message with image + full caption
+  // /start command — image + caption
   bot.onText(/\/start/, async (msg) => {
     await upsertUser(msg.from);
 
@@ -22,7 +31,7 @@ Ask me anything, or try:
 
     await bot.sendPhoto(msg.chat.id, welcomeImage, {
       caption,
-      parse_mode: "Markdown" // Safe here—caption is controlled text
+      parse_mode: "Markdown"
     });
   });
 
@@ -43,7 +52,12 @@ Ask me anything, or try:
     const prompt = msg.text || "";
     const reply = await generateText(prompt);
 
-    // Use HTML to avoid Gemini markdown chaos
-    await bot.sendMessage(msg.chat.id, reply, { parse_mode: "HTML" });
+    const parts = chunkText(reply);
+
+    for (const part of parts) {
+      await bot.sendMessage(msg.chat.id, part, {
+        parse_mode: "HTML"
+      });
+    }
   });
 }
