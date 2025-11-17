@@ -1,12 +1,3 @@
-
-📄 README.md (Complete Production Version)
-
-Create:
-
-NexAi-Neo/README.md
-
-Paste this complete file:
-
 # 🚀 Nexus AI — Telegram + Gemini + Supabase Bot
 
 Nexus is a fully serverless AI assistant powered by:
