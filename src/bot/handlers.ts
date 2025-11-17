@@ -8,16 +8,25 @@ export function registerMessageHandlers(bot: TelegramBot) {
   bot.onText(/\/start/, async (msg) => {
     await upsertUser(msg.from);
 
-    const message = `
+    const welcomeImage =
+      "https://firebasestorage.googleapis.com/v0/b/crnn-b7d8f.appspot.com/o/files%2FIMG_20250717_215454_617.webp?alt=media&token=474c6c29-9eeb-48f6-bb8e-fbf0b167d476";
+
+    const welcomeText = `
 👋 Welcome to Nexus!
 I'm powered by Gemini 2.5 Pro + Supabase.
 
 Ask me anything, or try:
 • Inline mode — type @YourBot <query>
 (⚠️ Image generation is currently disabled)
-    `;
+    `.trim();
 
-    await bot.sendMessage(msg.chat.id, message.trim());
+    // Send welcome image
+    await bot.sendPhoto(msg.chat.id, welcomeImage, {
+      caption: "🌌 Welcome to Nexus"
+    });
+
+    // Send welcome message
+    await bot.sendMessage(msg.chat.id, welcomeText);
   });
 
   // /image command (disabled)
@@ -28,7 +37,7 @@ Ask me anything, or try:
     );
   });
 
-  // Default message handler
+  // Default chat handler for all non-command messages
   bot.on("message", async (msg) => {
     if (msg.text?.startsWith("/")) return;
 
