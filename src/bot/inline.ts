@@ -1,6 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
-import { generateText } from "../ai/gemini";
-import { supabase } from "../db/client";
+import { generateText } from "../ai/gemini.js";
+import { supabase } from "../db/client.js";
 
 /**
  * Inline query handler for Nexus.
