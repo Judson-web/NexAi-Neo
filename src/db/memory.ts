@@ -1,84 +1,113 @@
 // src/db/memory.ts
+
 import { supabase } from "./client.js";
 
-/**
- * Insert or update a memory (persistent user fact).
- *
- * This prevents duplicates:
- * - If the exact same summary already exists, we simply update timestamps.
- * - Otherwise we insert a new memory.
- */
-export async function upsertMemory(
+/* ----------------------------------------------------------
+   Fetch top-K strongest memories for the user
+   Ranking formula:
+     score * 0.7  +  use_count * 0.2  +  recency_boost * 0.1
+---------------------------------------------------------- */
+export async function getTopMemories(
   userId: number,
-  summary: string,
-  source: string = "auto_summary",
-  importance: number = 3
-) {
+  limit: number = 5
+): Promise<{ id: number; memory: string }[]> {
   try {
-    const now = new Date().toISOString();
-
-    // Check if the memory already exists (exact match)
-    const { data: existing } = await supabase
+    // Fetch memories + usage in a single joined query
+    const { data, error } = await supabase
       .from("memories")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("summary", summary)
-      .limit(1);
+      .select(`
+        id,
+        memory,
+        score,
+        memory_usage (
+          use_count,
+          last_used
+        )
+      `)
+      .eq("user_id", userId);
 
-    if (existing && existing.length > 0) {
-      // Update timestamps only
-      await supabase
-        .from("memories")
-        .update({
-          updated_at: now,
-          last_used: now,
-        })
-        .eq("id", existing[0].id);
-
-      return;
+    if (error) {
+      console.error("❌ getTopMemories error:", error);
+      return [];
     }
 
-    // Insert new memory
-    await supabase.from("memories").insert([
-      {
-        user_id: userId,
-        summary,
-        source,
-        importance,
-        created_at: now,
-        updated_at: now,
-        last_used: now,
-      }
-    ]);
-  } catch (err: any) {
-    console.error("❌ upsertMemory error:", err.message);
+    if (!data) return [];
+
+    // Ranking algorithm — more usage = fresher = higher rank
+    const ranked = data
+      .map((m) => {
+        const usage = m.memory_usage?.[0];
+
+        const useCount = usage?.use_count ?? 0;
+
+        // Recency boost: memories used in last 7 days get a bump
+        let recencyBoost = 0;
+        if (usage?.last_used) {
+          const daysAgo =
+            (Date.now() - new Date(usage.last_used).getTime()) / 86400000;
+          recencyBoost = daysAgo < 7 ? 1 : 0;
+        }
+
+        const score = (m.score ?? 1) * 0.7 + useCount * 0.2 + recencyBoost * 0.1;
+
+        return {
+          id: m.id,
+          memory: m.memory,
+          rank: score
+        };
+      })
+      .sort((a, b) => b.rank - a.rank)
+      .slice(0, limit);
+
+    return ranked.map((m) => ({ id: m.id, memory: m.memory }));
+  } catch (err) {
+    console.error("❌ getTopMemories fatal error:", err);
+    return [];
   }
 }
 
-/**
- * Fetch the most relevant memories (Top-N ordered by importance + recency).
- */
-export async function fetchRelevantMemories(
+/* ----------------------------------------------------------
+   Save a memory (rarely used — memoryManager handles inserts)
+---------------------------------------------------------- */
+export async function saveMemory(
   userId: number,
-  limit: number = 5
+  memory: string,
+  score = 1
 ) {
   try {
     const { data, error } = await supabase
       .from("memories")
-      .select("summary, importance, updated_at")
-      .eq("user_id", userId)
-      .order("importance", { ascending: false })
-      .order("updated_at", { ascending: false })
-      .limit(limit);
+      .insert({
+        user_id: userId,
+        memory,
+        score
+      })
+      .select("id")
+      .single();
 
-    if (error) {
-      console.error("❌ fetchRelevantMemories error:", error.message);
-      return [];
-    }
+    if (error) console.error("❌ saveMemory error:", error);
 
-    return data || [];
-  } catch (err: any) {
-    console.error("❌ fetchRelevantMemories exception:", err.message);
-    return [];
+    return data?.id ?? null;
+  } catch (err) {
+    console.error("❌ saveMemory fatal error:", err);
+    return null;
+  }
+}
+
+/* ----------------------------------------------------------
+   Manually bump memory usage (fallback)
+---------------------------------------------------------- */
+export async function recordMemoryUse(memoryId: number) {
+  try {
+    await supabase.from("memory_usage").upsert(
+      {
+        memory_id: memoryId,
+        last_used: new Date().toISOString(),
+        use_count: 1
+      },
+      { onConflict: "memory_id" }
+    );
+  } catch (err) {
+    console.error("❌ recordMemoryUse error:", err);
   }
 }
