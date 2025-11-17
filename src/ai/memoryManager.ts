@@ -1,114 +1,122 @@
 // src/ai/memoryManager.ts
-import { createMemory, updateMemoryUsage } from "../db/memory.js";
+
+import { supabase } from "../db/client.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { config } from "../config.js";
 
 const genAI = new GoogleGenerativeAI(config.gemini.key);
 
-/**
- * Ask Gemini to evaluate whether the user message + bot response
- * should be saved as long-term memory.
- */
-export async function evaluateMemoryNeed(
-  userMessage: string,
-  botReply: string,
-  history: string
-) {
-  const model = genAI.getGenerativeModel({
-    model: "models/gemini-2.5-pro"
-  });
+/* ----------------------------------------------------------
+   1. Ask Gemini to decide if a message is a long-term memory
+---------------------------------------------------------- */
+async function extractMemory(userInput: string, aiReply: string, history: string) {
+  const systemPrompt = `
+You evaluate whether a user's message contains *long-term personal memory*.
 
-  const prompt = `
-You are an AI memory controller.
+Long-term memory examples:
+• personal preferences ("I love anime", "I hate spicy food")
+• personal profile ("I'm 17", "I live in Delhi")
+• stable habits ("I wake up at 5am", "I always code at night")
+• ongoing projects ("I'm building an app called Nexus")
+• goals ("I want to become a designer")
 
-Your task: decide whether the following information is important enough
-to store as **long-term memory** about the user.
+DO NOT extract:
+• temporary questions
+• greetings
+• single-use info
+• random facts unrelated to the user
 
-Criteria for saving memory:
-- User preferences (likes/dislikes)
-- Stable traits or personality
-- Long-term plans or goals
-- Background details (hobbies, routines, job, country)
-- Skills / expertise
-- Projects the user is working on
-- Repeated behavior patterns
-
-DO NOT store:
-- Temporary requests
-- One-time questions
-- Casual conversation
-- Anything unrelated to the user
-
-Return ONLY a JSON object:
-
+Return JSON ONLY in this format:
 {
   "should_write_memory": true/false,
-  "memory_to_write": "short summary sentence"
+  "memory_to_write": "string"
 }
 
-Example memory:
-"User prefers dark themes"
-"User is building a Telegram bot using Node.js"
-"User's favorite color is purple"
-
----
-
-### Conversation History
+Conversation history:
 ${history}
 
-### User Message
-${userMessage}
+User message:
+${userInput}
 
-### Bot Reply
-${botReply}
-`;
+AI reply:
+${aiReply}
+  `.trim();
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+    const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-pro" });
+    const result = await model.generateContent(systemPrompt);
 
-    return JSON.parse(text);
+    const raw = result.response.text();
+    const json = JSON.parse(raw);
+
+    return json;
   } catch (err) {
-    console.error("❌ Memory evaluation error:", err);
-    return { should_write_memory: false };
+    console.error("❌ extractMemory Error:", err);
+    return { should_write_memory: false, memory_to_write: "" };
   }
 }
 
-/**
- * Save memory if Gemini decides it's important.
- */
+/* ----------------------------------------------------------
+   2. Save memory if Gemini approves it
+---------------------------------------------------------- */
 export async function processMemoryUpdate(
   userId: number,
-  userMessage: string,
-  botReply: string,
+  userInput: string,
+  aiReply: string,
   history: string
 ) {
-  // Step 1: Ask Gemini if memory is important
-  const decision = await evaluateMemoryNeed(
-    userMessage,
-    botReply,
-    history
-  );
+  try {
+    const evaluation = await extractMemory(userInput, aiReply, history);
 
-  if (!decision || !decision.should_write_memory) {
-    return false; // Nothing to store
+    if (!evaluation.should_write_memory) return;
+
+    const memory = evaluation.memory_to_write?.trim();
+    if (!memory) return;
+
+    // Insert into memories + usage
+    const { data, error } = await supabase
+      .from("memories")
+      .insert({
+        user_id: userId,
+        memory,
+        score: 1 // default weight
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("❌ Failed to insert memory:", error);
+      return;
+    }
+
+    // Add initial usage record
+    await supabase.from("memory_usage").insert({
+      memory_id: data.id,
+      last_used: new Date().toISOString(),
+      use_count: 1
+    });
+
+  } catch (err) {
+    console.error("❌ processMemoryUpdate Error:", err);
   }
-
-  const summary = decision.memory_to_write?.trim();
-  if (!summary) return false;
-
-  // Step 2: Save memory in DB
-  await createMemory(userId, summary, 1.0);
-
-  return true;
 }
 
-/**
- * Every time a memory is referenced in the context builder,
- * update its recency so the ranking stays fresh.
- */
+/* ----------------------------------------------------------
+   3. Touch memories to mark as "fresh"
+---------------------------------------------------------- */
 export async function touchMemories(memoryIds: number[]) {
-  for (const id of memoryIds) {
-    await updateMemoryUsage(id);
+  if (!memoryIds.length) return;
+
+  try {
+    const updates = memoryIds.map((id) => ({
+      memory_id: id,
+      last_used: new Date().toISOString()
+    }));
+
+    await supabase.from("memory_usage").upsert(updates, {
+      onConflict: "memory_id"
+    });
+  } catch (err) {
+    console.error("❌ touchMemories Error:", err);
   }
 }
