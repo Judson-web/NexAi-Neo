@@ -3,111 +3,70 @@
 import { supabase } from "./client.js";
 
 /* ----------------------------------------------------------
-   Fetch top-K strongest memories for the user
-   Ranking formula:
-     score * 0.7  +  use_count * 0.2  +  recency_boost * 0.1
+   Fetch top N memories for a user, ordered by score + recency
 ---------------------------------------------------------- */
 export async function getTopMemories(
   userId: number,
-  limit: number = 5
-): Promise<{ id: number; memory: string }[]> {
+  limit = 5
+) {
   try {
-    // Fetch memories + usage in a single joined query
     const { data, error } = await supabase
       .from("memories")
-      .select(`
-        id,
-        memory,
-        score,
-        memory_usage (
-          use_count,
-          last_used
-        )
-      `)
-      .eq("user_id", userId);
+      .select("id, memory, score, last_used")
+      .eq("user_id", userId)
+      .order("score", { ascending: false })
+      .order("last_used", { ascending: false })
+      .limit(limit);
 
     if (error) {
       console.error("❌ getTopMemories error:", error);
       return [];
     }
 
-    if (!data) return [];
-
-    // Ranking algorithm — more usage = fresher = higher rank
-    const ranked = data
-      .map((m) => {
-        const usage = m.memory_usage?.[0];
-
-        const useCount = usage?.use_count ?? 0;
-
-        // Recency boost: memories used in last 7 days get a bump
-        let recencyBoost = 0;
-        if (usage?.last_used) {
-          const daysAgo =
-            (Date.now() - new Date(usage.last_used).getTime()) / 86400000;
-          recencyBoost = daysAgo < 7 ? 1 : 0;
-        }
-
-        const score = (m.score ?? 1) * 0.7 + useCount * 0.2 + recencyBoost * 0.1;
-
-        return {
-          id: m.id,
-          memory: m.memory,
-          rank: score
-        };
-      })
-      .sort((a, b) => b.rank - a.rank)
-      .slice(0, limit);
-
-    return ranked.map((m) => ({ id: m.id, memory: m.memory }));
+    return data || [];
   } catch (err) {
-    console.error("❌ getTopMemories fatal error:", err);
+    console.error("❌ getTopMemories fatal:", err);
     return [];
   }
 }
 
 /* ----------------------------------------------------------
-   Save a memory (rarely used — memoryManager handles inserts)
+   Update score & last_used for specific memory rows
 ---------------------------------------------------------- */
-export async function saveMemory(
-  userId: number,
-  memory: string,
-  score = 1
-) {
+export async function bumpMemoryScores(ids: number[]) {
+  if (!ids.length) return;
+
   try {
-    const { data, error } = await supabase
-      .from("memories")
-      .insert({
-        user_id: userId,
-        memory,
-        score
-      })
-      .select("id")
-      .single();
+    const { error } = await supabase.rpc(
+      "increment_memory_score",
+      { memory_ids: ids }
+    );
 
-    if (error) console.error("❌ saveMemory error:", error);
-
-    return data?.id ?? null;
+    if (error) console.error("❌ bumpMemoryScores RPC error:", error);
   } catch (err) {
-    console.error("❌ saveMemory fatal error:", err);
-    return null;
+    console.error("❌ bumpMemoryScores fatal:", err);
   }
 }
 
 /* ----------------------------------------------------------
-   Manually bump memory usage (fallback)
+   Insert new memory
 ---------------------------------------------------------- */
-export async function recordMemoryUse(memoryId: number) {
+export async function insertMemory(
+  userId: number,
+  memory: string
+) {
   try {
-    await supabase.from("memory_usage").upsert(
-      {
-        memory_id: memoryId,
-        last_used: new Date().toISOString(),
-        use_count: 1
-      },
-      { onConflict: "memory_id" }
-    );
+    const { error } = await supabase
+      .from("memories")
+      .insert({
+        user_id: userId,
+        memory,
+        score: 1,
+        last_used: new Date().toISOString()
+      });
+
+    if (error) console.error("❌ insertMemory error:", error);
   } catch (err) {
-    console.error("❌ recordMemoryUse error:", err);
+    console.error("❌ insertMemory fatal:", err);
   }
 }
