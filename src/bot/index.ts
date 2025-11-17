@@ -3,20 +3,18 @@ import { config } from "../config.js";
 import { registerMessageHandlers } from "./handlers.js";
 import { registerInlineHandlers } from "./inline.js";
 
-// Create bot in webhook mode
 export const bot = new TelegramBot(config.telegram.token, {
-  webHook: true
+  webHook: { port: Number(config.server.port) }
 });
 
-// Set full webhook URL
-const webhookUrl = `${config.server.webhookUrl}/webhook`;
+// Set webhook on startup
+if (config.server.webhookUrl) {
+  bot.setWebHook(`${config.server.webhookUrl}/webhook`);
+  console.log("🌐 Webhook set to:", config.server.webhookUrl);
+}
 
-bot.setWebHook(webhookUrl)
-  .then(() => console.log("🌐 Webhook set:", webhookUrl))
-  .catch(err => console.error("Webhook error:", err));
-
-// Attach handlers
+// Register handlers
 registerMessageHandlers(bot);
 registerInlineHandlers(bot);
 
-console.log("🤖 Nexus Telegram Bot initialized.");
+console.log("🤖 Nexus Bot initialized");
