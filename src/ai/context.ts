@@ -1,27 +1,47 @@
-import { fetchRecentMessages } from "../db/conversation.js";
+// src/ai/context.ts
 import { fetchRelevantMemories } from "../db/memory.js";
+import { fetchConversationHistory } from "../db/conversation.js";
 
 /**
- * Build the prompt for Gemini:
- *  - system instruction (bot behavior)
- *  - recent messages (short-term context)
- *  - relevant memories (persistent facts)
- *  - user prompt
+ * Build a rich context bundle combining:
+ *  - Relevant memories
+ *  - Recent chat history
+ *  - The latest user message
  */
-export async function buildPrompt(userId, userPrompt) {
-  const sys = `You are Nexus, an intelligent Telegram assistant. Keep answers concise and helpful. If user asks personal things, prefer privacy.`;
+export async function buildContext(userId: number, latestMessage: string) {
+  // Load top 5 memories (ranked by importance + recency)
+  const memories = await fetchRelevantMemories(userId);
 
-  const recent = await fetchRecentMessages(userId, 12); // last 12 messages
-  const memories = await fetchRelevantMemories(userId, 5);
+  // Load recent messages (last 15)
+  const history = await fetchConversationHistory(userId, 15);
 
-  const memText = memories.length
-    ? "Persistent facts about the user:\n" + memories.map((m,i) => `${i+1}. ${m.summary}`).join("\n") + "\n\n"
-    : "";
+  const memoryText =
+    memories.length > 0
+      ? memories.map((m) => `• ${m.summary}`).join("\n")
+      : "None";
 
-  const convoText = recent.length
-    ? "Recent conversation:\n" + recent.map(m => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`).join("\n") + "\n\n"
-    : "";
+  const historyText =
+    history.length > 0
+      ? history
+          .map((h) => `${h.role.toUpperCase()}: ${h.message}`)
+          .join("\n")
+      : "None";
 
-  const prompt = `${sys}\n\n${memText}${convoText}User: ${userPrompt}\nAssistant:`;
-  return prompt;
+  return `
+### USER CONTEXT
+Your output must follow these rules:
+- Use the user's memories to stay consistent across chats.
+- Use the recent conversation history to stay context-aware.
+- Do NOT mention "memories" or "context" to the user.
+- Respond naturally as if you remembered everything normally.
+
+### LONG-TERM MEMORIES (important facts)
+${memoryText}
+
+### RECENT CONVERSATION (chronological)
+${historyText}
+
+### NEW USER MESSAGE
+USER: ${latestMessage}
+`.trim();
 }
