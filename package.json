@@ -1,0 +1,27 @@
+{
+  "name": "nexai-neo",
+  "version": "1.0.0",
+  "description": "NexAi-Neo: Supabase + Gemini + Telegram AI Bot",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "latest",
+    "@supabase/supabase-js": "latest",
+    "axios": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "node-telegram-bot-api": "latest"
+  },
+  "devDependencies": {
+    "@types/express": "latest",
+    "@types/node": "latest",
+    "ts-node": "latest",
+    "ts-node-dev": "latest",
+    "typescript": "latest"
+  }
+}
