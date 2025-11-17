@@ -20,10 +20,9 @@ Ask me anything, or try:
 (⚠️ Image generation is currently disabled)
     `.trim();
 
-    // Send one message: image + caption
     await bot.sendPhoto(msg.chat.id, welcomeImage, {
       caption,
-      parse_mode: "Markdown"
+      parse_mode: "Markdown" // Safe here—caption is controlled text
     });
   });
 
@@ -44,6 +43,7 @@ Ask me anything, or try:
     const prompt = msg.text || "";
     const reply = await generateText(prompt);
 
-    await bot.sendMessage(msg.chat.id, reply, { parse_mode: "Markdown" });
+    // Use HTML to avoid Gemini markdown chaos
+    await bot.sendMessage(msg.chat.id, reply, { parse_mode: "HTML" });
   });
 }
