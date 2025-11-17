@@ -1,3 +1,4 @@
+// src/bot/handlers.ts
 import TelegramBot from "node-telegram-bot-api";
 import { upsertUser } from "../db/users.js";
 import { generateText } from "../ai/gemini.js";
@@ -8,29 +9,29 @@ import { generateText } from "../ai/gemini.js";
 function formatMarkdownToHTML(text: string = ""): string {
   if (!text) return "";
 
-  // Escape HTML first
+  // Escape unsafe HTML
   let html = text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
-  // Bold: **text**
+  // Bold **text**
   html = html.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
 
-  // Italic: *text* or _text_
-  html = html.replace(/(?:\*)([^*]+)(?:\*)/g, "<i>$1</i>");
+  // Italic *text* OR _text_
+  html = html.replace(/(?<!\*)\*(?!\*)([^*]+)(?<!\*)\*(?!\*)/g, "<i>$1</i>");
   html = html.replace(/_(.+?)_/g, "<i>$1</i>");
 
-  // Inline code: `code`
+  // Inline code `code`
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
 
-  // Code blocks: ``` code ```
+  // Code blocks ``` code ```
   html = html.replace(/```([\s\S]+?)```/g, (m, code) => {
     const clean = code.trim();
     return `<pre><code>${clean}</code></pre>`;
   });
 
-  // Headings #, ##, ###
+  // Headings
   html = html.replace(/^### (.+)$/gm, "<b>$1</b>");
   html = html.replace(/^## (.+)$/gm, "<b>$1</b>");
   html = html.replace(/^# (.+)$/gm, "<b>$1</b>");
@@ -42,18 +43,18 @@ function formatMarkdownToHTML(text: string = ""): string {
 }
 
 /* ----------------------------------------------------------
-   2. Telegram message splitter (to avoid the 4096 limit)
+   2. Split long messages (Telegram hard limit: 4096 chars)
 ---------------------------------------------------------- */
 function chunkText(text: string, size = 3500) {
-  const parts = [];
+  const chunks = [];
   for (let i = 0; i < text.length; i += size) {
-    parts.push(text.slice(i, i + size));
+    chunks.push(text.slice(i, i + size));
   }
-  return parts;
+  return chunks;
 }
 
 /* ----------------------------------------------------------
-   3. Register handlers
+   3. Register bot handlers
 ---------------------------------------------------------- */
 export function registerMessageHandlers(bot: TelegramBot) {
 
@@ -75,7 +76,7 @@ Ask me anything, or try:
 (⚠️ Image generation is currently disabled)
     `.trim();
 
-    const buttons = {
+    const inlineButtons = {
       reply_markup: {
         inline_keyboard: [
           [
@@ -95,12 +96,12 @@ Ask me anything, or try:
 
     await bot.sendPhoto(msg.chat.id, welcomeImage, {
       caption,
-      ...buttons
+      ...inlineButtons
     });
   });
 
   /* --------------------------------------------------------
-     /image — disabled (temporarily)
+     /image — disabled temporarily
   -------------------------------------------------------- */
   bot.onText(/\/image (.+)/, async (msg) => {
     await bot.sendMessage(
@@ -110,7 +111,7 @@ Ask me anything, or try:
   });
 
   /* --------------------------------------------------------
-     Default text → Gemini → HTML formatted output
+     Default text → Gemini response (HTML formatted)
   -------------------------------------------------------- */
   bot.on("message", async (msg) => {
     if (msg.text?.startsWith("/")) return;
@@ -118,10 +119,10 @@ Ask me anything, or try:
     await upsertUser(msg.from);
 
     const prompt = msg.text || "";
-    const reply = await generateText(prompt);
+    const reply = await generateText(prompt, msg.from.id);
 
-    const html = formatMarkdownToHTML(reply);
-    const parts = chunkText(html);
+    const safeHTML = formatMarkdownToHTML(reply);
+    const parts = chunkText(safeHTML);
 
     for (const part of parts) {
       await bot.sendMessage(msg.chat.id, part, { parse_mode: "HTML" });
@@ -129,34 +130,40 @@ Ask me anything, or try:
   });
 
   /* --------------------------------------------------------
-     Handle inline button callbacks
+     Inline button callbacks
   -------------------------------------------------------- */
   bot.on("callback_query", async (query) => {
     const chatId = query.message?.chat.id;
     if (!chatId) return;
 
     if (query.data === "show_commands") {
-      await bot.sendMessage(chatId, `
-📜 *Available Commands*
+      await bot.sendMessage(
+        chatId,
+        `
+📜 *Commands*
 
-/start — Show welcome message  
-/image — (Disabled)  
-/help — Coming soon  
-      `.trim(), { parse_mode: "Markdown" });
+/start — Restart bot  
+/image — Disabled  
+Inline Mode — @YourBot <query>  
+        `.trim(),
+        { parse_mode: "Markdown" }
+      );
     }
 
     if (query.data === "show_about") {
-      await bot.sendMessage(chatId, `
+      await bot.sendMessage(
+        chatId,
+        `
 ℹ️ *About Nexus*
 
-Nexus is powered by:  
-• Gemini 2.5 Pro  
+• Powered by Gemini 2.5 Pro  
+• Conversational memory system  
 • Supabase user tracking  
-• Inline AI search  
-• Telegram deep integration  
-
-Designed for speed and intelligence.
-      `.trim(), { parse_mode: "Markdown" });
+• Inline smart search  
+• Ultra-fast Telegram integration  
+        `.trim(),
+        { parse_mode: "Markdown" }
+      );
     }
 
     await bot.answerCallbackQuery(query.id);
