@@ -4,51 +4,44 @@ import { generateText } from "../ai/gemini.js";
 import { generateImage } from "../ai/image.js";
 
 export function registerMessageHandlers(bot: TelegramBot) {
-  // /start command
-  bot.onText(/\/start/, async (ctx) => {
-    await upsertUser(ctx.from);
 
-    const message =
-      "👋 Welcome to Nexus!\n" +
-      "I'm powered by Gemini + Supabase.\n\n" +
-      "Ask me anything, or try:\n" +
-      "• /image <prompt> — generate an AI image\n" +
-      "• Inline mode — type @YourBot <query>";
+  bot.onText(/\/start/, async (msg) => {
+    await upsertUser(msg.from);
 
-    await bot.sendMessage(ctx.chat.id, message);
+    const message = `
+👋 Welcome to Nexus!
+I'm powered by Gemini + Supabase.
+
+Ask me anything, or try:
+• /image <prompt>
+• Inline mode — type @YourBot <query>
+    `;
+
+    await bot.sendMessage(msg.chat.id, message.trim());
   });
 
-  // /image command
-  bot.onText(/\/image (.+)/, async (ctx, match) => {
+  bot.onText(/\/image (.+)/, async (msg, match) => {
     const prompt = match?.[1];
-    if (!prompt) {
-      return bot.sendMessage(ctx.chat.id, "Please enter an image prompt.");
-    }
+    if (!prompt) return bot.sendMessage(msg.chat.id, "Enter an image prompt.");
 
-    await bot.sendMessage(ctx.chat.id, "🎨 Creating your image...");
+    await bot.sendMessage(msg.chat.id, "🎨 Creating your image...");
 
     const buffer = await generateImage(prompt);
+    if (!buffer) return bot.sendMessage(msg.chat.id, "⚠️ Image generation failed.");
 
-    if (!buffer) {
-      return bot.sendMessage(ctx.chat.id, "⚠️ Failed to generate image.");
-    }
-
-    await bot.sendPhoto(ctx.chat.id, buffer, {
-      caption: `🖼️ Image generated for: ${prompt}`
+    await bot.sendPhoto(msg.chat.id, buffer, {
+      caption: `🖼️ Generated: ${prompt}`
     });
   });
 
-  // Default text handler
-  bot.on("message", async (ctx) => {
-    if (ctx.text?.startsWith("/")) return;
+  bot.on("message", async (msg) => {
+    if (msg.text?.startsWith("/")) return;
 
-    await upsertUser(ctx.from);
+    await upsertUser(msg.from);
 
-    const prompt = ctx.text || "";
+    const prompt = msg.text || "";
     const reply = await generateText(prompt);
 
-    await bot.sendMessage(ctx.chat.id, reply, {
-      parse_mode: "Markdown"
-    });
+    await bot.sendMessage(msg.chat.id, reply, { parse_mode: "Markdown" });
   });
 }
