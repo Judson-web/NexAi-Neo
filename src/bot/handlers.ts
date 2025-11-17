@@ -14,7 +14,6 @@ function formatMarkdownToHTML(text: string = ""): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
-  // Restore HTML tags for formatting
   // Bold: **text**
   html = html.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
 
@@ -25,21 +24,18 @@ function formatMarkdownToHTML(text: string = ""): string {
   // Inline code: `code`
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
 
-  // Code blocks: ```lang\n code ```
-  html = html.replace(/```([^`]+)```/gs, (match, code) => {
-    const clean = code.trim().replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+  // Code blocks: ``` code ```
+  html = html.replace(/```([\s\S]+?)```/g, (m, code) => {
+    const clean = code.trim();
     return `<pre><code>${clean}</code></pre>`;
   });
 
-  // Headings ## Title → <b>TITLE</b>
+  // Headings #, ##, ###
   html = html.replace(/^### (.+)$/gm, "<b>$1</b>");
   html = html.replace(/^## (.+)$/gm, "<b>$1</b>");
   html = html.replace(/^# (.+)$/gm, "<b>$1</b>");
 
-  // Links: [text](url)
-  html = html.replace(/([^]+)\]([^)]+)/g, `<a href="$2">$1</a>`);
-
-  // Bullet lists → preserve formatting
+  // Bullet lists
   html = html.replace(/^\* (.+)$/gm, "• $1");
 
   return html;
@@ -61,7 +57,9 @@ function chunkText(text: string, size = 3500) {
 ---------------------------------------------------------- */
 export function registerMessageHandlers(bot: TelegramBot) {
 
-  // /start command with image + caption
+  /* --------------------------------------------------------
+     /start — Image + Caption + Inline Buttons
+  -------------------------------------------------------- */
   bot.onText(/\/start/, async (msg) => {
     await upsertUser(msg.from);
 
@@ -77,13 +75,33 @@ Ask me anything, or try:
 (⚠️ Image generation is currently disabled)
     `.trim();
 
+    const buttons = {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: "💬 Ask Nexus", switch_inline_query_current_chat: "" }
+          ],
+          [
+            { text: "📜 Commands", callback_data: "show_commands" },
+            { text: "ℹ️ About", callback_data: "show_about" }
+          ],
+          [
+            { text: "👨‍💻 Developer", url: "https://t.me/developer" }
+          ]
+        ]
+      },
+      parse_mode: "Markdown"
+    };
+
     await bot.sendPhoto(msg.chat.id, welcomeImage, {
       caption,
-      parse_mode: "Markdown"
+      ...buttons
     });
   });
 
-  // /image command (disabled)
+  /* --------------------------------------------------------
+     /image — disabled (temporarily)
+  -------------------------------------------------------- */
   bot.onText(/\/image (.+)/, async (msg) => {
     await bot.sendMessage(
       msg.chat.id,
@@ -91,7 +109,9 @@ Ask me anything, or try:
     );
   });
 
-  // Default text handler
+  /* --------------------------------------------------------
+     Default text → Gemini → HTML formatted output
+  -------------------------------------------------------- */
   bot.on("message", async (msg) => {
     if (msg.text?.startsWith("/")) return;
 
@@ -100,14 +120,45 @@ Ask me anything, or try:
     const prompt = msg.text || "";
     const reply = await generateText(prompt);
 
-    // Convert Gemini Markdown → Telegram HTML
     const html = formatMarkdownToHTML(reply);
-
-    // Split long output
     const parts = chunkText(html);
 
     for (const part of parts) {
       await bot.sendMessage(msg.chat.id, part, { parse_mode: "HTML" });
     }
+  });
+
+  /* --------------------------------------------------------
+     Handle inline button callbacks
+  -------------------------------------------------------- */
+  bot.on("callback_query", async (query) => {
+    const chatId = query.message?.chat.id;
+    if (!chatId) return;
+
+    if (query.data === "show_commands") {
+      await bot.sendMessage(chatId, `
+📜 *Available Commands*
+
+/start — Show welcome message  
+/image — (Disabled)  
+/help — Coming soon  
+      `.trim(), { parse_mode: "Markdown" });
+    }
+
+    if (query.data === "show_about") {
+      await bot.sendMessage(chatId, `
+ℹ️ *About Nexus*
+
+Nexus is powered by:  
+• Gemini 2.5 Pro  
+• Supabase user tracking  
+• Inline AI search  
+• Telegram deep integration  
+
+Designed for speed and intelligence.
+      `.trim(), { parse_mode: "Markdown" });
+    }
+
+    await bot.answerCallbackQuery(query.id);
   });
 }
