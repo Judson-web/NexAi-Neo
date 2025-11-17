@@ -3,7 +3,7 @@
 import { supabase } from "../db/client.js";
 
 /* ----------------------------------------------------------
-   Save a single turn of chat (user → AI)
+   Save a new conversation turn
 ---------------------------------------------------------- */
 export async function saveHistory(
   userId: number,
@@ -11,48 +11,53 @@ export async function saveHistory(
   aiReply: string
 ) {
   try {
-    const { error } = await supabase.from("history").insert({
+    const { error } = await supabase.from("chat_history").insert({
       user_id: userId,
       user_message: userMessage,
       ai_reply: aiReply
     });
 
-    if (error) console.error("❌ saveHistory Error:", error.message);
+    if (error) {
+      console.error("❌ saveHistory error:", error);
+    }
   } catch (err) {
-    console.error("❌ saveHistory Exception:", err);
+    console.error("❌ saveHistory fatal error:", err);
   }
 }
 
 /* ----------------------------------------------------------
-   Load last N history messages
+   Load the last N messages as a readable history block
 ---------------------------------------------------------- */
 export async function loadHistory(
   userId: number,
-  limit = 20
+  limit: number = 20
 ): Promise<string> {
   try {
     const { data, error } = await supabase
-      .from("history")
+      .from("chat_history")
       .select("user_message, ai_reply")
       .eq("user_id", userId)
       .order("id", { ascending: false })
       .limit(limit);
 
     if (error) {
-      console.error("❌ loadHistory Error:", error.message);
+      console.error("❌ loadHistory error:", error);
       return "";
     }
 
     if (!data || data.length === 0) return "";
 
-    // Build readable context string
-    return data
-      .reverse() // oldest → newest
-      .map((turn) => `User: ${turn.user_message}\nAI: ${turn.ai_reply}`)
-      .join("\n\n");
+    // Reverse to chronological order
+    const sorted = data.reverse();
 
+    // Build clean alternating history
+    const parts = sorted.map(
+      (row) => `User: ${row.user_message}\nAI: ${row.ai_reply}`
+    );
+
+    return parts.join("\n\n");
   } catch (err) {
-    console.error("❌ loadHistory Exception:", err);
+    console.error("❌ loadHistory fatal error:", err);
     return "";
   }
 }
