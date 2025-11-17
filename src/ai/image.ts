@@ -4,35 +4,40 @@ import { config } from "../config.js";
 const genAI = new GoogleGenerativeAI(config.gemini.key);
 
 /**
- * Generate an AI image (PNG) using Gemini.
- * Uses gemini-pro-vision (the correct image-capable model).
+ * Generate an image using JSON output from Gemini 2.x models.
+ * This avoids PNG response types (no longer supported).
  */
 export async function generateImage(prompt) {
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-pro-vision"
+      model: "gemini-2.5-pro"   // more capable for multimodal
     });
 
     const result = await model.generateContent({
       contents: [
         {
           role: "user",
-          parts: [{ text: prompt }]
+          parts: [{ text: `Generate an image. ${prompt}` }]
         }
       ],
       generationConfig: {
-        responseMimeType: "image/png"
+        responseMimeType: "application/json"
       }
     });
 
-    const base64 = result.response.text();
+    const jsonText = result.response.text();
+    const parsed = JSON.parse(jsonText);
 
-    if (!base64) {
-      console.error("❌ Gemini returned empty image output");
-      return null;
+    if (
+      parsed &&
+      parsed.image &&
+      parsed.image.data
+    ) {
+      return Buffer.from(parsed.image.data, "base64");
     }
 
-    return Buffer.from(base64, "base64");
+    console.error("❌ No image data found in JSON response.");
+    return null;
 
   } catch (err) {
     console.error("❌ Image Error:", err);
