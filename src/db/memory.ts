@@ -3,70 +3,93 @@
 import { supabase } from "./client.js";
 
 /* ----------------------------------------------------------
-   Fetch top N memories for a user, ordered by score + recency
+   Insert or update a memory w/ score boost
+---------------------------------------------------------- */
+export async function addMemory(
+  userId: number,
+  text: string,
+  score: number
+) {
+  const { error } = await supabase.from("memory").insert({
+    user_id: userId,
+    memory: text,
+    score,
+    last_used: new Date().toISOString()
+  });
+
+  if (error) {
+    console.error("❌ addMemory Error:", error);
+  }
+}
+
+/* ----------------------------------------------------------
+   Get top N highest-scoring memories for a user
 ---------------------------------------------------------- */
 export async function getTopMemories(
   userId: number,
-  limit = 5
+  limit: number
 ) {
-  try {
-    const { data, error } = await supabase
-      .from("memories")
-      .select("id, memory, score, last_used")
-      .eq("user_id", userId)
-      .order("score", { ascending: false })
-      .order("last_used", { ascending: false })
-      .limit(limit);
+  const { data, error } = await supabase
+    .from("memory")
+    .select("id, memory, score, last_used")
+    .eq("user_id", userId)
+    .order("score", { ascending: false })
+    .limit(limit);
 
-    if (error) {
-      console.error("❌ getTopMemories error:", error);
-      return [];
-    }
-
-    return data || [];
-  } catch (err) {
-    console.error("❌ getTopMemories fatal:", err);
+  if (error) {
+    console.error("❌ getTopMemories Error:", error);
     return [];
   }
+
+  return data || [];
 }
 
 /* ----------------------------------------------------------
-   Update score & last_used for specific memory rows
+   Mark memories as recently used (freshening)
 ---------------------------------------------------------- */
-export async function bumpMemoryScores(ids: number[]) {
-  if (!ids.length) return;
+export async function touchMemories(ids: number[]) {
+  if (!ids || ids.length === 0) return;
 
-  try {
-    const { error } = await supabase.rpc(
-      "increment_memory_score",
-      { memory_ids: ids }
-    );
+  const { error } = await supabase
+    .from("memory")
+    .update({
+      last_used: new Date().toISOString()
+    })
+    .in("id", ids);
 
-    if (error) console.error("❌ bumpMemoryScores RPC error:", error);
-  } catch (err) {
-    console.error("❌ bumpMemoryScores fatal:", err);
+  if (error) {
+    console.error("❌ touchMemories Error:", error);
   }
 }
 
 /* ----------------------------------------------------------
-   Insert new memory
+   Boost memory score when AI judges memory as important
 ---------------------------------------------------------- */
-export async function insertMemory(
-  userId: number,
-  memory: string
-) {
-  try {
-    const { error } = await supabase
-      .from("memories")
-      .insert({
-        user_id: userId,
-        memory,
-        score: 1,
-        last_used: new Date().toISOString()
-      });
+export async function boostMemoryScore(id: number, amount = 1) {
+  const { error } = await supabase.rpc("boost_memory_score", {
+    memory_id: id,
+    inc: amount
+  });
 
-    if (error) console.error("❌ insertMemory error:", error);
-  } catch (err) {
-    console.error("❌ insertMemory fatal:", err);
+  if (error) {
+    console.error("❌ boostMemoryScore Error:", error);
   }
+}
+
+/* ----------------------------------------------------------
+   Fetch ALL memories (useful for debugging/admin)
+---------------------------------------------------------- */
+export async function getAllMemories(userId: number) {
+  const { data, error } = await supabase
+    .from("memory")
+    .select("*")
+    .eq("user_id", userId)
+    .order("score", { ascending: false });
+
+  if (error) {
+    console.error("❌ getAllMemories Error:", error);
+    return [];
+  }
+
+  return data || [];
 }
