@@ -1,37 +1,36 @@
-// src/bot/handlers.ts
 import TelegramBot from "node-telegram-bot-api";
 import { upsertUser } from "../db/users.js";
 import { generateText } from "../ai/gemini.js";
 
 /* ----------------------------------------------------------
-   1. Convert Gemini Markdown → Telegram-safe HTML
+   Convert Gemini Markdown → Telegram-safe HTML
 ---------------------------------------------------------- */
 function formatMarkdownToHTML(text: string = ""): string {
   if (!text) return "";
 
-  // Escape unsafe HTML
+  // Escape HTML first
   let html = text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
-  // Bold **text**
+  // Bold: **text**
   html = html.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
 
-  // Italic *text* OR _text_
-  html = html.replace(/(?<!\*)\*(?!\*)([^*]+)(?<!\*)\*(?!\*)/g, "<i>$1</i>");
+  // Italic: *text* or _text_
+  html = html.replace(/(?:\*)([^*]+)(?:\*)/g, "<i>$1</i>");
   html = html.replace(/_(.+?)_/g, "<i>$1</i>");
 
-  // Inline code `code`
+  // Inline code: `code`
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
 
-  // Code blocks ``` code ```
+  // Code block: ``` code ```
   html = html.replace(/```([\s\S]+?)```/g, (m, code) => {
     const clean = code.trim();
     return `<pre><code>${clean}</code></pre>`;
   });
 
-  // Headings
+  // Headings → bold
   html = html.replace(/^### (.+)$/gm, "<b>$1</b>");
   html = html.replace(/^## (.+)$/gm, "<b>$1</b>");
   html = html.replace(/^# (.+)$/gm, "<b>$1</b>");
@@ -43,23 +42,23 @@ function formatMarkdownToHTML(text: string = ""): string {
 }
 
 /* ----------------------------------------------------------
-   2. Split long messages (Telegram hard limit: 4096 chars)
+   Telegram Message Splitter (4096 limit → safe 3500 chunks)
 ---------------------------------------------------------- */
 function chunkText(text: string, size = 3500) {
-  const chunks = [];
+  const parts: string[] = [];
   for (let i = 0; i < text.length; i += size) {
-    chunks.push(text.slice(i, i + size));
+    parts.push(text.slice(i, i + size));
   }
-  return chunks;
+  return parts;
 }
 
 /* ----------------------------------------------------------
-   3. Register bot handlers
+   Register all message handlers
 ---------------------------------------------------------- */
 export function registerMessageHandlers(bot: TelegramBot) {
 
   /* --------------------------------------------------------
-     /start — Image + Caption + Inline Buttons
+     /start — Image, caption, & inline buttons
   -------------------------------------------------------- */
   bot.onText(/\/start/, async (msg) => {
     await upsertUser(msg.from);
@@ -69,25 +68,20 @@ export function registerMessageHandlers(bot: TelegramBot) {
 
     const caption = `
 👋 Welcome to Nexus!
-I'm powered by Gemini 2.5 Pro + Supabase.
+I'm powered by Gemini 2.5 Pro + Supabase memory.
 
 Ask me anything, or try:
 • Inline mode — type @YourBot <query>
 (⚠️ Image generation is currently disabled)
-    `.trim();
+`.trim();
 
-    const inlineButtons = {
+    const buttons = {
       reply_markup: {
         inline_keyboard: [
-          [
-            { text: "💬 Ask Nexus", switch_inline_query_current_chat: "" }
-          ],
+          [{ text: "💬 Ask Nexus", switch_inline_query_current_chat: "" }],
           [
             { text: "📜 Commands", callback_data: "show_commands" },
             { text: "ℹ️ About", callback_data: "show_about" }
-          ],
-          [
-            { text: "👨‍💻 Developer", url: "https://t.me/developer" }
           ]
         ]
       },
@@ -96,71 +90,70 @@ Ask me anything, or try:
 
     await bot.sendPhoto(msg.chat.id, welcomeImage, {
       caption,
-      ...inlineButtons
+      ...buttons
     });
   });
 
   /* --------------------------------------------------------
-     /image — disabled temporarily
+     /image — disabled for now
   -------------------------------------------------------- */
   bot.onText(/\/image (.+)/, async (msg) => {
     await bot.sendMessage(
       msg.chat.id,
-      "⚠️ Image generation is temporarily disabled while Nexus upgrades to a new image engine."
+      "⚠️ Image generation is temporarily disabled while Nexus upgrades its engine."
     );
   });
 
   /* --------------------------------------------------------
-     Default text → Gemini response (HTML formatted)
+     Main chat handler with memory-enabled AI
   -------------------------------------------------------- */
   bot.on("message", async (msg) => {
     if (msg.text?.startsWith("/")) return;
 
     await upsertUser(msg.from);
 
+    const userId = msg.from?.id!;
     const prompt = msg.text || "";
-    const reply = await generateText(prompt, msg.from.id);
 
-    const safeHTML = formatMarkdownToHTML(reply);
-    const parts = chunkText(safeHTML);
+    const reply = await generateText(prompt, userId);
+
+    const html = formatMarkdownToHTML(reply);
+    const parts = chunkText(html);
 
     for (const part of parts) {
-      await bot.sendMessage(msg.chat.id, part, { parse_mode: "HTML" });
+      await bot.sendMessage(msg.chat.id, part, {
+        parse_mode: "HTML"
+      });
     }
   });
 
   /* --------------------------------------------------------
-     Inline button callbacks
+     Handle inline callback buttons
   -------------------------------------------------------- */
   bot.on("callback_query", async (query) => {
     const chatId = query.message?.chat.id;
     if (!chatId) return;
 
     if (query.data === "show_commands") {
-      await bot.sendMessage(
-        chatId,
+      await bot.sendMessage(chatId,
         `
 📜 *Commands*
-
-/start — Restart bot  
+/start — Welcome  
 /image — Disabled  
-Inline Mode — @YourBot <query>  
+/help — Coming soon  
         `.trim(),
         { parse_mode: "Markdown" }
       );
     }
 
     if (query.data === "show_about") {
-      await bot.sendMessage(
-        chatId,
+      await bot.sendMessage(chatId,
         `
 ℹ️ *About Nexus*
-
 • Powered by Gemini 2.5 Pro  
-• Conversational memory system  
-• Supabase user tracking  
-• Inline smart search  
-• Ultra-fast Telegram integration  
+• Long-term memory  
+• Inline AI search  
+• Supabase backend  
         `.trim(),
         { parse_mode: "Markdown" }
       );
