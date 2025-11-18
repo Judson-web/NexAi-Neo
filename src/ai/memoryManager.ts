@@ -1,128 +1,102 @@
-// src/ai/memoryManager.ts
-
-import { supabase } from "../db/client.js";
-import { config } from "../config.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { config } from "../config.js";
+
+import {
+  addMemory,
+  updateMemory,
+  boostMemoryScore
+} from "../db/memory.js";
 
 const genAI = new GoogleGenerativeAI(config.gemini.key);
 
 /* ----------------------------------------------------------
-   Ask Gemini: Should this message become a memory?
+   Prompt: Decide if user message should enter long-term memory
 ---------------------------------------------------------- */
-async function evaluateMemoryRelevance(
-  userMessage: string,
+function buildMemoryPrompt(userInput: string, aiReply: string, history: string) {
+  return `
+You are a memory-analysis module.
+
+Your job:
+1. Detect if the latest user message contains personal, recurring, or long-term relevant information.
+2. Respond ONLY with JSON in this format:
+
+{
+  "should_write_memory": true | false,
+  "memory_to_write": "text or empty string",
+  "should_update_memory": true | false,
+  "updated_memory_text": "text when updating, or empty"
+}
+
+Do NOT include explanations.
+
+---
+
+Conversation History:
+${history}
+
+User said:
+"${userInput}"
+
+AI replied:
+"${aiReply}"
+  `.trim();
+}
+
+/* ----------------------------------------------------------
+   Process memory update from AI instruction JSON
+---------------------------------------------------------- */
+export async function processMemoryUpdate(
+  userId: number,
+  userInput: string,
   aiReply: string,
   history: string
-): Promise<string | null> {
+) {
   try {
+    const prompt = buildMemoryPrompt(userInput, aiReply, history);
+
     const model = genAI.getGenerativeModel({
       model: "models/gemini-2.5-pro"
     });
 
-    const prompt = `
-You are a memory extraction model.
-
-Given the user's latest message and the AI's reply,
-decide if this contains *long-term useful info* about the user.
-
-Examples of valid memories:
-- user preferences ("I like horror movies")
-- personal data they want the AI to remember
-- goals or projects they are working on
-- writing style or personality traits
-- long-term dislikes or limitations
-
-Invalid memories:
-- random questions
-- temporary tasks
-- jokes
-- greetings
-
-Output ONLY one of the following:
-1. A short memory sentence (if relevant)
-2. "NO_MEMORY"
----
-
-Conversation history:
-${history}
-
-User message: ${userMessage}
-AI reply: ${aiReply}
-
-Extracted memory:
-`;
-
     const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+    const raw = result.response.text().trim();
 
-    if (!text || text === "NO_MEMORY") return null;
+    let parsed = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      console.warn("⚠️ Memory JSON parse failed:", raw);
+      return;
+    }
 
-    return text;
+    const {
+      should_write_memory,
+      memory_to_write,
+      should_update_memory,
+      updated_memory_text
+    } = parsed;
+
+    if (should_write_memory && memory_to_write) {
+      await addMemory(userId, memory_to_write);
+    }
+
+    if (should_update_memory && updated_memory_text) {
+      await updateMemory(userId, updated_memory_text);
+    }
   } catch (err) {
-    console.error("❌ Memory relevance error:", err);
-    return null;
+    console.error("❌ Memory Manager Error:", err);
   }
 }
 
 /* ----------------------------------------------------------
-   Save a new memory row with initial score
----------------------------------------------------------- */
-export async function saveMemory(
-  userId: number,
-  memory: string
-) {
-  try {
-    const { error } = await supabase.from("memories").insert({
-      user_id: userId,
-      memory,
-      score: 1,        // initial importance
-      last_used: new Date().toISOString()
-    });
-
-    if (error) console.error("❌ saveMemory error:", error);
-  } catch (err) {
-    console.error("❌ saveMemory fatal:", err);
-  }
-}
-
-/* ----------------------------------------------------------
-   Touch memories (mark them as recently used)
+   Refresh recency score for memories that were used
 ---------------------------------------------------------- */
 export async function touchMemories(memoryIds: number[]) {
-  if (!memoryIds.length) return;
-
   try {
-    const now = new Date().toISOString();
-
-    const { error } = await supabase
-      .from("memories")
-      .update({ last_used: now, score: supabase.rpc("increment_score") })
-      .in("id", memoryIds);
-
-    if (error) console.error("❌ touchMemories error:", error);
+    for (const id of memoryIds) {
+      await boostMemoryScore(id);
+    }
   } catch (err) {
-    console.error("❌ touchMemories fatal:", err);
+    console.error("❌ touchMemories Error:", err);
   }
-}
-
-/* ----------------------------------------------------------
-   Main entry: process memory update pipeline
----------------------------------------------------------- */
-export async function processMemoryUpdate(
-  userId: number,
-  userMessage: string,
-  aiReply: string,
-  history: string
-) {
-  // Ask the LLM if this should be remembered
-  const extracted = await evaluateMemoryRelevance(
-    userMessage,
-    aiReply,
-    history
-  );
-
-  if (!extracted) return;
-
-  // Save memory
-  await saveMemory(userId, extracted);
 }
