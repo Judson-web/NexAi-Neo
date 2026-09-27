@@ -46,7 +46,7 @@ function App(){
     {user&&!loading&&<Result user={user} copy={copy}/>}
    </section>
    <section className="features" id="how"><div className="section-title"><span>01</span><h2>Only the useful stuff.</h2></div><div className="feature-grid">
-    <article><ImageIcon/><b>1024px CDN image</b><p>Uses Discord’s avatar CDN and preserves animated GIF avatars.</p></article>
+    <article><ImageIcon/><b>Up to 4096px CDN image</b><p>Preview and download quality follow the selected CDN size.</p></article>
     <article><Link2/><b>Shareable lookup</b><p>Each result gets a clean <code>/user/ID</code> URL.</p></article>
     <article><Sparkles/><b>No account needed</b><p>No Discord login, password, or client token is collected.</p></article>
    </div></section>
@@ -58,9 +58,9 @@ function App(){
 }
 
 function Result({user,copy}){const defaultFormat=user.animated?"gif":(user.format||"png");const[quality,setQuality]=useState(1024),[format,setFormat]=useState(defaultFormat);const availableFormats=user.animated?["gif","png","webp"]:["png","jpg","webp"];const download=async()=>{try{const r=await fetch(imageUrl(user,quality,format));if(!r.ok)throw Error();const b=await r.blob(),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=(user.username||user.id)+"-"+quality+"px."+format;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}catch{window.open(imageUrl(user,quality,format),"_blank")}};return <section className="result">
- <div className="avatar-stage"><div className="avatar-glow"/><img src={imageUrl(user)} alt="Discord avatar" onError={e=>{e.currentTarget.style.display="none"}}/><span className="format">{user.animated?"GIF":"PNG"}</span></div>
+ <div className="avatar-stage"><div className="avatar-glow"/><img key={quality+"-"+format} src={imageUrl(user,quality,format)} alt={"Discord avatar "+quality+"px "+format} onError={e=>{e.currentTarget.style.display="none"}}/><span className="format">{quality}px · {format.toUpperCase()}</span></div>
  <div className="result-info"><div className="result-label">CURRENT DISCORD AVATAR</div><h2>{user.globalName||user.username}</h2><p className="handle">@{user.username}</p>
-  <div className="meta-grid"><div><small>USER ID</small><b>{user.id}</b></div><div><small>SOURCE</small><b>{defaultFormat.toUpperCase()}</b></div><div><small>PREVIEW</small><b>1024 × 1024</b></div></div><div className="download-options"><label><span>QUALITY</span><select value={quality} onChange={e=>setQuality(Number(e.target.value))}>{[16,32,64,128,256,512,1024,2048,4096].map(size=><option key={size} value={size}>{size}px</option>)}</select></label><label><span>EXTENSION</span><select value={format} onChange={e=>setFormat(e.target.value)}>{availableFormats.map(ext=><option key={ext} value={ext}>{ext.toUpperCase()}</option>)}</select></label></div>
+  <div className="meta-grid"><div><small>USER ID</small><b>{user.id}</b></div><div><small>SOURCE</small><b>{defaultFormat.toUpperCase()}</b></div><div><small>PREVIEW</small><b>{quality} × {quality}</b></div></div><div className="download-options"><label><span>QUALITY</span><select value={quality} onChange={e=>setQuality(Number(e.target.value))}>{[16,32,64,128,256,512,1024,2048,4096].map(size=><option key={size} value={size}>{size}px</option>)}</select></label><label><span>EXTENSION</span><select value={format} onChange={e=>setFormat(e.target.value)}>{availableFormats.map(ext=><option key={ext} value={ext}>{ext.toUpperCase()}</option>)}</select></label></div>
   <div className="actions"><button onClick={download}><Download size={15}/> Download</button><button onClick={()=>copy(user.avatarUrl)}><Copy size={15}/> Copy URL</button><a href={user.avatarUrl} target="_blank" rel="noreferrer"><ExternalLink size={15}/> Open</a></div>
   <div className="cdn"><span>DISCORD CDN</span><code>{user.avatarUrl}</code></div>
  </div>
