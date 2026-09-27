@@ -13,12 +13,12 @@ function getInitialId(){const p=new URLSearchParams(location.search).get("id");r
 function Logo(){return <a className="brand" href="/"><span className="brand-mark">D</span><span>Discord PFP Extractor</span></a>}
 
 function App(){
- const initial=getInitialId(),[query,setQuery]=useState(initial),[user,setUser]=useState(null),[loading,setLoading]=useState(!!initial),[error,setError]=useState(""),[history,setHistory]=useState(readHistory),[menu,setMenu]=useState(false),[toast,setToast]=useState("");
- const lookup=async raw=>{
+ const initial=getInitialId(),[query,setQuery]=useState(initial),[user,setUser]=useState(null),[loading,setLoading]=useState(!!initial),[error,setError]=useState(""),[recentIds,setRecentIds]=useState(readHistory),[menu,setMenu]=useState(false),[toast,setToast]=useState("");
+ const navigateToUser=id=>{window.history.replaceState(null,"","/user/"+id)};\n const lookup=async raw=>{
   const id=normalize(raw);
   if(!id){setError("Enter a valid Discord user ID or profile URL.");setUser(null);return}
   setQuery(id);setError("");setLoading(true);setUser(null);history.replaceState({},"","/user/"+id);
-  try{const r=await fetch("/api/discord-user?id="+id);const d=await r.json();if(!r.ok)throw Error(d.error||"Could not retrieve this Discord user.");setUser(d);setHistory(prev=>{const n=[id,...prev.filter(x=>x!==id)].slice(0,6);saveHistory(n);return n})}
+  try{const r=await fetch("/api/discord-user?id="+id);const d=await r.json();if(!r.ok)throw Error(d.error||"Could not retrieve this Discord user.");setUser(d);setRecentIds(prev=>{const n=[id,...prev.filter(x=>x!==id)].slice(0,6);saveHistory(n);return n})}
   catch(e){setError(e.message||"Could not retrieve this Discord user.")}finally{setLoading(false)}
  };
  useEffect(()=>{if(initial)lookup(initial);const pop=()=>{const id=getInitialId();setQuery(id);id?lookup(id):(setUser(null),setError(""))};addEventListener("popstate",pop);return()=>removeEventListener("popstate",pop)},[]);
@@ -48,7 +48,7 @@ function App(){
     <article><Link2/><b>Shareable lookup</b><p>Each result gets a clean <code>/user/ID</code> URL.</p></article>
     <article><Sparkles/><b>No account needed</b><p>No Discord login, password, or client token is collected.</p></article>
    </div></section>
-   {history.length>0&&<section className="history"><div className="section-title"><span>02</span><h2>Recent lookups</h2></div><div className="history-row">{history.map(id=><button key={id} onClick={()=>lookup(id)}><span>•••{id.slice(-4)}</span><small>{id}</small></button>)}</div></section>}
+   {recentIds.length>0&&<section className="history"><div className="section-title"><span>02</span><h2>Recent lookups</h2></div><div className="history-row">{recentIds.map(id=><button key={id} onClick={()=>lookup(id)}><span>•••{id.slice(-4)}</span><small>{id}</small></button>)}</div></section>}
   </main>
   <footer><Logo/><span>Uses public Discord profile data. Not affiliated with Discord.</span></footer>
   {toast&&<div className="toast">{toast}</div>}
