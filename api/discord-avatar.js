@@ -1,4 +1,5 @@
 export default async function handler(req,res){
+  res.setHeader("Allow","GET");
   if(req.method!=="GET")return res.status(405).json({error:"Method not allowed."});
   const id=String(req.query.id||"").trim();
   const hash=String(req.query.hash||"").trim();
@@ -6,10 +7,17 @@ export default async function handler(req,res){
   const format=["png","jpg","jpeg","webp","gif"].includes(requestedFormat)?(requestedFormat==="jpeg"?"jpg":requestedFormat):"png";
   const size=Number(req.query.size||1024);
   const allowedSizes=[16,32,64,128,256,512,1024,2048,4096];
-  if(!/^\d{15,22}$/.test(id)||!/^[a-zA-Z0-9_]{20,80}$/.test(hash)||!allowedSizes.includes(size))return res.status(400).json({error:"Invalid avatar request."});
+  const hashIsValid=/^[a-zA-Z0-9_]{20,80}$/.test(hash);
+  if(!/^\d{15,22}$/.test(id)||!hashIsValid||!allowedSizes.includes(size))return res.status(400).json({error:"Invalid avatar request."});
+  const animated=hash.startsWith("a_");
+  const allowedFormats=animated?["gif"]:["png","jpg","webp"];
+  if(!allowedFormats.includes(format))return res.status(400).json({error:animated?"Animated avatars are only available as GIF.":"That format is not available for this avatar."});
   const url=`https://cdn.discordapp.com/avatars/${id}/${hash}.${format}?size=${size}`;
   try{
-    const r=await fetch(url,{headers:{Accept:"image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"}});
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),10000);
+    const r=await fetch(url,{headers:{Accept:"image/avif,image/webp,image/apng,image/*,*/*;q=0.8"},signal:controller.signal});
+    clearTimeout(timeout);
     if(!r.ok)return res.status(r.status===404?404:502).json({error:"Avatar image is unavailable in that format."});
     const type=r.headers.get("content-type")||`image/${format}`;
     const data=Buffer.from(await r.arrayBuffer());
@@ -17,5 +25,5 @@ export default async function handler(req,res){
     res.setHeader("Cache-Control","public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800");
     res.setHeader("Content-Length",String(data.length));
     return res.status(200).send(data);
-  }catch(e){console.error("discord-avatar",e);return res.status(502).json({error:"Could not load the avatar right now."})}
+  }catch(e){console.error("discord-avatar",e);return res.status(e?.name==="AbortError"?504:502).json({error:e?.name==="AbortError"?"The avatar took too long to load. Please try again.":"Could not load the avatar right now."})}
 }
