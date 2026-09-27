@@ -1,8 +1,6 @@
 {
   "rewrites": [
-    { "source": "/search", "destination": "/index.html" },
-    { "source": "/settings", "destination": "/index.html" },
-    { "source": "/about", "destination": "/index.html" },
-    { "source": "/advanced", "destination": "/index.html" }
+    { "source": "/extract", "destination": "/index.html" },
+    { "source": "/user/:id", "destination": "/index.html" }
   ]
 }
