@@ -1,20 +1,6 @@
 {
-  "name": "nexai-neo",
-  "version": "1.0.0",
-  "type": "module",
-  "main": "dist/server.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/server.js"
-  },
-  "dependencies": {
-    "@google/generative-ai": "^0.7.0",
-    "@supabase/supabase-js": "^2.43.4",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "node-telegram-bot-api": "^0.61.0"
-  },
-  "devDependencies": {
-    "typescript": "^5.7.2"
-  }
+  "name":"nexus","version":"2.0.0","private":true,"type":"module",
+  "scripts":{"dev":"vite","build":"vite build","preview":"vite preview"},
+  "dependencies":{"lucide-react":"^0.468.0","react":"^19.0.0","react-dom":"^19.0.0"},
+  "devDependencies":{"@vitejs/plugin-react":"^4.3.4","vite":"^6.0.0"}
 }
