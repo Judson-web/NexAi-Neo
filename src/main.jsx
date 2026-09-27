@@ -23,7 +23,8 @@ function App(){
  };
  useEffect(()=>{if(initial)lookup(initial);const pop=()=>{const id=getInitialId();setQuery(id);id?lookup(id):(setUser(null),setError(""))};addEventListener("popstate",pop);return()=>removeEventListener("popstate",pop)},[]);
  const copy=async text=>{try{await navigator.clipboard.writeText(text);setToast("Copied")}catch{setToast("Copy failed")}setTimeout(()=>setToast(""),1500)};
- const imageUrl=user=>"/api/discord-avatar?id="+encodeURIComponent(user.id)+"&hash="+encodeURIComponent(user.avatar)+"&format="+encodeURIComponent(user.format);\n const download=async()=>{if(!user)return;try{const r=await fetch(imageUrl(user));if(!r.ok)throw Error();const b=await r.blob(),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=(user.username||user.id)+"-avatar."+user.format;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}catch{window.open(user.avatarUrl,"_blank")}};
+ const imageUrl=user=>"/api/discord-avatar?id="+encodeURIComponent(user.id)+"&hash="+encodeURIComponent(user.avatar)+"&format="+encodeURIComponent(user.format);
+ const download=async()=>{if(!user)return;try{const r=await fetch(imageUrl(user));if(!r.ok)throw Error();const b=await r.blob(),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=(user.username||user.id)+"-avatar."+user.format;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}catch{window.open(user.avatarUrl,"_blank")}};
  return <div className="app">
   <header><Logo/><nav><a href="#extract">Extract</a><a href="#how">How it works</a></nav><button className="menu-btn" onClick={()=>setMenu(v=>!v)} aria-label="Menu"><Menu size={18}/></button></header>
   {menu&&<div className="mobile-menu"><a href="#extract" onClick={()=>setMenu(false)}>Extract</a><a href="#how" onClick={()=>setMenu(false)}>How it works</a></div>}
