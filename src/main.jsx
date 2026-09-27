@@ -23,7 +23,7 @@ function App(){
  };
  useEffect(()=>{if(initial)lookup(initial);const pop=()=>{const id=getInitialId();setQuery(id);id?lookup(id):(setUser(null),setError(""))};addEventListener("popstate",pop);return()=>removeEventListener("popstate",pop)},[]);
  const copy=async text=>{try{await navigator.clipboard.writeText(text);setToast("Copied")}catch{setToast("Copy failed")}setTimeout(()=>setToast(""),1500)};
- const download=async()=>{if(!user)return;try{const r=await fetch(user.avatarUrl);if(!r.ok)throw Error();const b=await r.blob(),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=(user.username||user.id)+"-avatar."+user.format;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}catch{window.open(user.avatarUrl,"_blank")}};
+ const imageUrl=user=>"/api/discord-avatar?id="+encodeURIComponent(user.id)+"&hash="+encodeURIComponent(user.avatar)+"&format="+encodeURIComponent(user.format);\n const download=async()=>{if(!user)return;try{const r=await fetch(imageUrl(user));if(!r.ok)throw Error();const b=await r.blob(),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=(user.username||user.id)+"-avatar."+user.format;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}catch{window.open(user.avatarUrl,"_blank")}};
  return <div className="app">
   <header><Logo/><nav><a href="#extract">Extract</a><a href="#how">How it works</a></nav><button className="menu-btn" onClick={()=>setMenu(v=>!v)} aria-label="Menu"><Menu size={18}/></button></header>
   {menu&&<div className="mobile-menu"><a href="#extract" onClick={()=>setMenu(false)}>Extract</a><a href="#how" onClick={()=>setMenu(false)}>How it works</a></div>}
@@ -55,7 +55,7 @@ function App(){
 }
 
 function Result({user,copy,download}){return <section className="result">
- <div className="avatar-stage"><div className="avatar-glow"/><img src={user.avatarUrl} alt="Discord avatar"/><span className="format">{user.animated?"GIF":"PNG"}</span></div>
+ <div className="avatar-stage"><div className="avatar-glow"/><img src={imageUrl(user)} alt="Discord avatar" onError={e=>{e.currentTarget.style.display="none"}}/><span className="format">{user.animated?"GIF":"PNG"}</span></div>
  <div className="result-info"><div className="result-label">CURRENT DISCORD AVATAR</div><h2>{user.globalName||user.username}</h2><p className="handle">@{user.username}</p>
   <div className="meta-grid"><div><small>USER ID</small><b>{user.id}</b></div><div><small>FORMAT</small><b>{user.format.toUpperCase()}</b></div><div><small>DELIVERY</small><b>1024 × 1024</b></div></div>
   <div className="actions"><button onClick={download}><Download size={15}/> Download</button><button onClick={()=>copy(user.avatarUrl)}><Copy size={15}/> Copy URL</button><a href={user.avatarUrl} target="_blank" rel="noreferrer"><ExternalLink size={15}/> Open</a></div>
