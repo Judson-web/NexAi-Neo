@@ -1,24 +1,18 @@
-NEXUS
+# Discord PFP Extractor
 
-Nexus is a fast, clean web search engine built by repurposing the NexAi-Neo repository.
+A small React + Vite app for extracting public Discord profile avatars by user ID or Discord profile URL.
 
-STACK
+## Stack
 - React 19 + Vite
 - Vercel serverless API
-- GitHub source control
-- Brave Search API for full web results
-- Wikipedia fallback when no Brave key is configured
+- Discord API v10
+- Discord CDN
 
-DEVELOPMENT
+## Vercel configuration
+Set `DISCORD_BOT_TOKEN` in the Vercel Production environment. The token is only read by the serverless API and is never sent to the browser.
+
+## Development
+```bash
 npm install
 npm run dev
-
-VERCEL
-Set BRAVE_SEARCH_API_KEY in the Vercel project's Production environment. Without the key, Nexus still works using Wikipedia search as a fallback.
-Build command: npm run build
-Output directory: dist
-
-SEARCH URLS
-Nexus uses normal query URLs such as /search?q=quantum+biology. Searches are shareable, bookmarkable, and directly addressable.
-
-The old Telegram/Gemini bot implementation has been retired from the active web build; this repository is now the Nexus search engine project.
+```
