@@ -8,7 +8,7 @@ const readHistory=()=>{try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||
 const saveHistory=v=>{try{localStorage.setItem(HISTORY_KEY,JSON.stringify(v))}catch{}};
 const normalize=v=>{const s=String(v||"").trim();const m=s.match(/(?:discord(?:app)?\.com\/users\/|discord(?:app)?\.com\/channels\/\d+\/\d+\/)?(\d{15,22})/i);return m?m[1]:""};
 
-const imageUrl=user=>"/api/discord-avatar?id="+encodeURIComponent(user.id)+"&hash="+encodeURIComponent(user.avatar)+"&format="+encodeURIComponent(user.format);
+const imageUrl=(user,size=1024,format=user.format)=>"/api/discord-avatar?id="+encodeURIComponent(user.id)+"&hash="+encodeURIComponent(user.avatar)+"&format="+encodeURIComponent(format)+"&size="+encodeURIComponent(size);
 
 function getInitialId(){const p=new URLSearchParams(location.search).get("id");return normalize(p)||normalize(location.pathname.match(/^\/user\/(\d{15,22})$/)?.[1]||"")}
 
@@ -26,7 +26,7 @@ function App(){
  };
  useEffect(()=>{if(initial)lookup(initial);const pop=()=>{const id=getInitialId();setQuery(id);id?lookup(id):(setUser(null),setError(""))};addEventListener("popstate",pop);return()=>removeEventListener("popstate",pop)},[]);
  const copy=async text=>{try{await navigator.clipboard.writeText(text);setToast("Copied")}catch{setToast("Copy failed")}setTimeout(()=>setToast(""),1500)};
- const download=async()=>{if(!user)return;try{const r=await fetch(imageUrl(user));if(!r.ok)throw Error();const b=await r.blob(),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=(user.username||user.id)+"-avatar."+user.format;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}catch{window.open(user.avatarUrl,"_blank")}};
+ 
  return <div className="app">
   <header><Logo/><nav><a href="#extract">Extract</a><a href="#how">How it works</a></nav><button className="menu-btn" onClick={()=>setMenu(v=>!v)} aria-label="Menu"><Menu size={18}/></button></header>
   {menu&&<div className="mobile-menu"><a href="#extract" onClick={()=>setMenu(false)}>Extract</a><a href="#how" onClick={()=>setMenu(false)}>How it works</a></div>}
@@ -43,7 +43,7 @@ function App(){
     <div className="hint"><ShieldCheck size={13}/> Your Discord password and bot token are never requested</div>
     {error&&<div className="error"><b>Couldn’t extract that avatar.</b><span>{error}</span></div>}
     {loading&&<div className="loading-card"><div className="loader-avatar"/><div className="loader-lines"><i/><i/><i/></div></div>}
-    {user&&!loading&&<Result user={user} copy={copy} download={download}/>}
+    {user&&!loading&&<Result user={user} copy={copy}/>}
    </section>
    <section className="features" id="how"><div className="section-title"><span>01</span><h2>Only the useful stuff.</h2></div><div className="feature-grid">
     <article><ImageIcon/><b>1024px CDN image</b><p>Uses Discord’s avatar CDN and preserves animated GIF avatars.</p></article>
@@ -57,10 +57,10 @@ function App(){
  </div>
 }
 
-function Result({user,copy,download}){return <section className="result">
+function Result({user,copy}){const defaultFormat=user.animated?"gif":(user.format||"png");const[quality,setQuality]=useState(1024),[format,setFormat]=useState(defaultFormat);const availableFormats=user.animated?["gif","png","webp"]:["png","jpg","webp"];const download=async()=>{try{const r=await fetch(imageUrl(user,quality,format));if(!r.ok)throw Error();const b=await r.blob(),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=(user.username||user.id)+"-"+quality+"px."+format;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}catch{window.open(imageUrl(user,quality,format),"_blank")}};return <section className="result">
  <div className="avatar-stage"><div className="avatar-glow"/><img src={imageUrl(user)} alt="Discord avatar" onError={e=>{e.currentTarget.style.display="none"}}/><span className="format">{user.animated?"GIF":"PNG"}</span></div>
  <div className="result-info"><div className="result-label">CURRENT DISCORD AVATAR</div><h2>{user.globalName||user.username}</h2><p className="handle">@{user.username}</p>
-  <div className="meta-grid"><div><small>USER ID</small><b>{user.id}</b></div><div><small>FORMAT</small><b>{user.format.toUpperCase()}</b></div><div><small>DELIVERY</small><b>1024 × 1024</b></div></div>
+  <div className="meta-grid"><div><small>USER ID</small><b>{user.id}</b></div><div><small>SOURCE</small><b>{defaultFormat.toUpperCase()}</b></div><div><small>PREVIEW</small><b>1024 × 1024</b></div></div><div className="download-options"><label><span>QUALITY</span><select value={quality} onChange={e=>setQuality(Number(e.target.value))}>{[16,32,64,128,256,512,1024,2048,4096].map(size=><option key={size} value={size}>{size}px</option>)}</select></label><label><span>EXTENSION</span><select value={format} onChange={e=>setFormat(e.target.value)}>{availableFormats.map(ext=><option key={ext} value={ext}>{ext.toUpperCase()}</option>)}</select></label></div>
   <div className="actions"><button onClick={download}><Download size={15}/> Download</button><button onClick={()=>copy(user.avatarUrl)}><Copy size={15}/> Copy URL</button><a href={user.avatarUrl} target="_blank" rel="noreferrer"><ExternalLink size={15}/> Open</a></div>
   <div className="cdn"><span>DISCORD CDN</span><code>{user.avatarUrl}</code></div>
  </div>
