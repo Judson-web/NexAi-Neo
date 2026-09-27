@@ -1,7 +1,7 @@
 export default async function handler(req,res){
   if(req.method!="GET")return res.status(405).json({error:"Method not allowed."});
   const id=String(req.query.id||"").trim();
-  if(!/^\\d{15,22}$/.test(id))return res.status(400).json({error:"Enter a valid Discord user ID."});
+  if(!/^\d{15,22}$/.test(id))return res.status(400).json({error:"Enter a valid Discord user ID."});
   const token=process.env.DISCORD_BOT_TOKEN;
   if(!token)return res.status(503).json({error:"Discord API access is not configured."});
   try{
