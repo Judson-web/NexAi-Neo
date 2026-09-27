@@ -14,10 +14,11 @@ function Logo(){return <a className="brand" href="/"><span className="brand-mark
 
 function App(){
  const initial=getInitialId(),[query,setQuery]=useState(initial),[user,setUser]=useState(null),[loading,setLoading]=useState(!!initial),[error,setError]=useState(""),[recentIds,setRecentIds]=useState(readHistory),[menu,setMenu]=useState(false),[toast,setToast]=useState("");
- const navigateToUser=id=>{window.history.replaceState(null,"","/user/"+id)};\n const lookup=async raw=>{
+ const navigateToUser=id=>{window.history.replaceState(null,"","/user/"+id)};
+ const lookup=async raw=>{
   const id=normalize(raw);
   if(!id){setError("Enter a valid Discord user ID or profile URL.");setUser(null);return}
-  setQuery(id);setError("");setLoading(true);setUser(null);history.replaceState({},"","/user/"+id);
+  setQuery(id);setError("");setLoading(true);setUser(null);navigateToUser(id);
   try{const r=await fetch("/api/discord-user?id="+id);const d=await r.json();if(!r.ok)throw Error(d.error||"Could not retrieve this Discord user.");setUser(d);setRecentIds(prev=>{const n=[id,...prev.filter(x=>x!==id)].slice(0,6);saveHistory(n);return n})}
   catch(e){setError(e.message||"Could not retrieve this Discord user.")}finally{setLoading(false)}
  };
