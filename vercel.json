@@ -1,1 +1,8 @@
-{"rewrites":[{"source":"/search","destination":"/index.html"}]}
+{
+  "rewrites": [
+    { "source": "/search", "destination": "/index.html" },
+    { "source": "/settings", "destination": "/index.html" },
+    { "source": "/about", "destination": "/index.html" },
+    { "source": "/advanced", "destination": "/index.html" }
+  ]
+}
