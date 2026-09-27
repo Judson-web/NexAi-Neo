@@ -6,7 +6,7 @@ import"./styles.css";
 
 const SUPABASE_URL=import.meta.env.VITE_SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
 const SUPABASE_KEY=import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4TYTujQh8w5NyAJA_3H2K5CEg";
-const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
+const supabase=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{flowType:"pkce"}});
 const HISTORY_KEY="pfp-history";
 const readHistory=()=>{try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]").filter(x=>/^\d{15,22}$/.test(x)).slice(0,6)}catch{return[]}};
 const saveHistory=v=>{try{localStorage.setItem(HISTORY_KEY,JSON.stringify(v))}catch{}};
@@ -18,7 +18,7 @@ function Logo(){return <a className="brand" href="/"><span className="brand-mark
 
 function App(){
  const [session,setSession]=useState(null),[authOpen,setAuthOpen]=useState(false);
- useEffect(()=>{supabase.auth.getSession().then(({data})=>setSession(data.session));const{data:{subscription}}=supabase.auth.onAuthStateChange((_event,s)=>setSession(s));return()=>subscription.unsubscribe()},[]);
+ useEffect(()=>{supabase.auth.getSession().then(({data})=>{setSession(data.session);if(location.hash.includes("access_token=")||location.hash.includes("code=")){history.replaceState(null,"",location.pathname+location.search)}});const{data:{subscription}}=supabase.auth.onAuthStateChange((_event,s)=>setSession(s));return()=>subscription.unsubscribe()},[]);
  useEffect(()=>{let active=true;(async()=>{if(!session?.user?.id)return;const{data}=await supabase.from("lookup_history").select("discord_user_id").order("looked_up_at",{ascending:false}).limit(6);if(active&&data)setRecentIds(data.map(x=>x.discord_user_id))})();return()=>{active=false}},[session?.user?.id]);
  const signOut=async()=>{await supabase.auth.signOut()};
  const initial=getInitialId(),[query,setQuery]=useState(initial),[user,setUser]=useState(null),[loading,setLoading]=useState(!!initial),[error,setError]=useState(""),[recentIds,setRecentIds]=useState(readHistory),[menu,setMenu]=useState(false),[toast,setToast]=useState("");
@@ -39,7 +39,7 @@ function App(){
 function AuthModal({close}){
  const[email,setEmail]=useState(""),[password,setPassword]=useState(""),[mode,setMode]=useState("signin"),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
  const submit=async e=>{e.preventDefault();setBusy(true);setMessage("");const fn=mode==="signin"?supabase.auth.signInWithPassword({email,password}):supabase.auth.signUp({email,password,options:{emailRedirectTo:location.origin}});const{data,error}=await fn;setBusy(false);if(error){setMessage(error.message);return}if(mode==="signup"&&!data.session)setMessage("Check your email to confirm your account.");else close()};
- const github=async()=>{setBusy(true);setMessage("");const{error}=await supabase.auth.signInWithOAuth({provider:"github",options:{redirectTo:location.origin}});if(error){setMessage(error.message);setBusy(false)}};
+ const github=async()=>{setBusy(true);setMessage("");const redirectTo=window.location.origin+"/";const{error}=await supabase.auth.signInWithOAuth({provider:"github",options:{redirectTo}});if(error){setMessage(error.message);setBusy(false)}};
  return <div className="auth-backdrop" onMouseDown={e=>e.target===e.currentTarget&&close()}><section className="auth-card"><button className="auth-close" onClick={close} aria-label="Close"><X size={17}/></button><div className="auth-icon"><LogIn size={18}/></div><div className="result-label">ACCOUNT</div><h2>{mode==="signin"?"Welcome back":"Create account"}</h2><p className="auth-copy">{mode==="signin"?"Sign in to keep your extractor experience synced.":"Create a free account for your extractor."}</p><button className="google-btn" onClick={github} disabled={busy}><span>GH</span> Continue with GitHub</button><div className="auth-divider"><span>or</span></div><form onSubmit={submit}><input className="auth-input" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value)} required/><input className="auth-input" type="password" placeholder="Password" minLength="6" value={password} onChange={e=>setPassword(e.target.value)} required/><button className="auth-submit" disabled={busy}>{busy?"Working…":mode==="signin"?"Sign in":"Create account"}</button></form>{message&&<div className="auth-message">{message}</div>}<button className="auth-switch" onClick={()=>{setMode(mode==="signin"?"signup":"signin");setMessage("")}}>{mode==="signin"?"Need an account? Create one":"Already have an account? Sign in"}</button></section></div>
 }
 
