@@ -168,3 +168,68 @@
  .site-github-credit img{width:29px;height:29px}
  .site-github-credit span,.site-github-credit svg{display:none}
 }
+
+
+/* Final responsive pass */
+html,body,#root{max-width:100%;overflow-x:hidden}
+.header-right{min-width:0}
+.site-github-credit{max-width:130px}
+.site-github-credit span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:1024px){
+ header,main,footer{width:min(100% - 32px,920px)}
+ nav{gap:18px}
+ .feature-grid{gap:8px}
+ .admin-panel{padding-top:64px}
+ .admin-head{gap:14px}
+ .admin-stats{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:760px){
+ header,main,footer{width:calc(100% - 24px)}
+ .admin-panel{padding:48px 0 64px}
+ .admin-head{margin-bottom:20px}
+ .admin-head h1{font-size:clamp(38px,11vw,48px)}
+ .admin-head p{max-width:520px;line-height:1.55}
+ .admin-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}
+ .admin-actions button{min-height:42px}
+ .admin-stats{grid-template-columns:repeat(3,1fr)}
+ .admin-section{margin-top:18px}
+ .admin-section-title{margin-bottom:10px}
+ .admin-ticket{grid-template-columns:1fr}
+ .admin-ticket-actions{display:grid;grid-template-columns:1fr 1fr;min-width:0;border-left:0;border-top:1px solid #1f232b}
+ .admin-user-details{grid-template-columns:1fr 1fr}
+ .ks-support{margin-top:18px}
+}
+@media(max-width:520px){
+ .brand{max-width:calc(100vw - 145px)}
+ .brand span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .admin-header-right{gap:5px}
+ .admin-badge{padding:5px 6px;font-size:7px}
+ .admin-panel{padding-top:38px}
+ .admin-head{gap:16px}
+ .admin-actions{grid-template-columns:1fr 1fr}
+ .admin-actions button{font-size:8px;padding:9px 7px}
+ .admin-stats{gap:6px}
+ .admin-stats div{padding:11px 9px}
+ .admin-stats small{font-size:6px}
+ .admin-stats b{font-size:18px}
+ .admin-section{padding:11px;border-radius:13px}
+ .admin-ticket-main{padding:12px}
+ .admin-ticket-actions{grid-template-columns:1fr 1fr;padding:9px}
+ .admin-ticket-actions button{font-size:7px;padding:8px 6px}
+ .admin-user-summary{padding:10px}
+ .admin-user-summary .admin-player{gap:8px}
+ .admin-user-details{grid-template-columns:1fr;gap:6px;padding:10px}
+ .admin-revoke{grid-column:auto}
+ .ks-support{padding:13px;border-radius:13px}
+ .ks-support-form{gap:7px}
+}
+@media(max-width:380px){
+ .admin-badge{display:none}
+ .site-github-credit img{width:27px;height:27px}
+ .menu-btn{width:32px;height:32px}
+ .admin-stats div{padding:10px 7px}
+ .admin-stats small{letter-spacing:.08em}
+ .admin-stats b{font-size:16px}
+ .admin-ticket-actions{grid-template-columns:1fr}
+ .admin-ticket-actions button{min-height:38px}
+}
