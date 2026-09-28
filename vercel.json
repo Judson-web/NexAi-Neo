@@ -1,15 +1,19 @@
 {
   "rewrites": [
     {
+      "source": "/redeem",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/auto",
+      "destination": "/index.html"
+    },
+    {
       "source": "/extract",
       "destination": "/index.html"
     },
     {
       "source": "/user/:id",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/auto",
       "destination": "/index.html"
     }
   ],
