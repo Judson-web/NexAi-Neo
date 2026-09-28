@@ -107,7 +107,7 @@
 .admin-ticket-heading{display:flex;align-items:center;gap:10px}
 .admin-ticket-icon{width:34px;height:34px;display:grid;place-items:center;flex:none;border:1px solid #3b3327;border-radius:10px;background:#17130d;color:#d5a85c}
 .admin-ticket.resolved .admin-ticket-icon{border-color:#283a2e;background:#101a14;color:#79b58c}
-.admin-ticket-title{min-width:0;flex:1}
+.admin-ticket-avatar{width:34px;height:34px;display:grid;place-items:center;flex:none;overflow:hidden;border:1px solid #2a2d36;border-radius:9px;background:#15171d;color:#777e8c;font-size:9px;font-weight:800}.admin-ticket-avatar img{width:100%;height:100%;display:block;object-fit:cover}.admin-ticket-title{min-width:0;flex:1}
 .admin-ticket-title>div{display:flex;align-items:center;gap:8px;min-width:0}
 .admin-ticket-title b{color:#e2dfe6;font-size:11px;font-weight:800}
 .admin-ticket-title small{display:flex;align-items:center;gap:6px;margin-top:4px;color:#5e6572;font-size:8px}
