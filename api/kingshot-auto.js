@@ -114,6 +114,10 @@ export default async function handler(req,res){
   const codes=mergeCodes(apiCodes,[...pageCodes,...VERIFIED_FALLBACK_CODES]);
   if(!codes.length)throw Error("Kingshot gift-code sources returned no active codes.");
   console.log("Kingshot auto feed:",{apiActive:data?.data?.activeCount??null,apiCodes:apiCodes.map(x=>x.code),pageCodes:pageCodes.map(x=>x.code),merged:codes.map(x=>x.code)});
+  await Promise.all(codes.map(item=>rpc("upsert_kingshot_gift_code",{
+   p_code:item.code,
+   p_source_date:item.createdAt&&!Number.isNaN(item.createdAt)?new Date(item.createdAt).toISOString().slice(0,10):null
+  })));
   const players=await rpc("list_kingshot_autoredeem_players",{});
   const list=Array.isArray(players)?players:[];
   console.log("Kingshot auto players:",{count:list.length,players:list.map(x=>x.player_id)});
