@@ -1,7 +1,7 @@
 import React from "react";
 import { ArrowLeft, ExternalLink, ShieldCheck, Scale, Database, Gamepad2, Image as ImageIcon } from "lucide-react";
 
-const ICON_URL="https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/74/27/3e/74273e55-e367-907a-2c85-1a687dc1f8ca/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/1200x630wa.png";
+const ICON_URL="https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/ee/d2/22/eed22297-9313-d8b0-52c8-95f42a2795b2/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/0x0ss-85.png";
 
 const services={
   "kingshot-manual":{
