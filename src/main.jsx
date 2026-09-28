@@ -1,6 +1,6 @@
 import React,{useEffect,useState}from"react";
 import{createRoot}from"react-dom/client";
-import{Copy,Download,ExternalLink,Gift,Image as ImageIcon,Link2,Menu,Search,ShieldCheck,Sparkles,X,CheckCircle,LoaderCircle,Clock,Info}from"lucide-react";
+import{Copy,Download,ExternalLink,Gift,Image as ImageIcon,Link2,Menu,Search,ShieldCheck,Sparkles,X,CheckCircle,LoaderCircle,Clock,Info,ArrowRight}from"lucide-react";
 import"./styles.css";
 
 const HISTORY_KEY="pfp-history";
