@@ -16,3 +16,7 @@
 .ks-registered-new .ks-registered-row{border-top-color:#202b24}
 .ks-registered-existing .ks-registered-row{border-top-color:#22232b}
 .ks-registered-existing .ks-avatar{background:#201d29;color:#aaa0c2}
+
+.ks-registered-row .ks-avatar{width:42px;height:42px;border-radius:12px;background:#211d2b;overflow:hidden;flex:none}
+.ks-registered-row .ks-avatar img{display:block;width:100%;height:100%;object-fit:cover}
+.ks-registered-existing .ks-registered-row .ks-avatar{background:#1d1b24}
