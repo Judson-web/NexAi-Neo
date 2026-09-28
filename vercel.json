@@ -7,6 +7,10 @@
     {
       "source": "/user/:id",
       "destination": "/index.html"
+    },
+    {
+      "source": "/auto",
+      "destination": "/index.html"
     }
   ],
   "headers": [
