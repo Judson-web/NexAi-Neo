@@ -13,6 +13,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/ks-admin",
+      "destination": "/index.html"
+    },
+    {
       "source": "/user/:id",
       "destination": "/index.html"
     }
