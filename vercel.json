@@ -17,6 +17,14 @@
       "destination": "/index.html"
     },
     {
+      "source": "/terms",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/index.html"
+    },
+    {
       "source": "/user/:id",
       "destination": "/index.html"
     }
