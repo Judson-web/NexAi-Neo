@@ -23,7 +23,7 @@ function normalizeCodes(data){
   if(seen.has(code.toUpperCase()))return null;
   seen.add(code.toUpperCase());
   return {code,expiresAt,createdAt};
- }).filter(Boolean).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+ }).filter(Boolean).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
 }
 
 const HANDLED_STATUSES=new Set(["SUCCESS","RECEIVED","SAME TYPE EXCHANGE","TIME_ERROR","CDK_NOT_FOUND","USAGE_LIMIT"]);
