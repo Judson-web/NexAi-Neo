@@ -11,9 +11,10 @@ export default async function handler(req,res){
  if(!/^\d{5,20}$/.test(playerId))return res.status(400).json({error:"Invalid player ID."});
  if(kingdomId&&!/^\d{1,10}$/.test(kingdomId))return res.status(400).json({error:"Invalid kingdom ID."});
  try{
-  const r=await fetch(SUPABASE_URL+"/rest/v1/rpc/register_kingshot_player",{method:"POST",headers:{"apikey":SUPABASE_KEY,"authorization":"Bearer "+SUPABASE_KEY,"content-type":"application/json"},body:JSON.stringify({p_player_id:playerId,p_kingdom_id:kingdomId||null,p_player_name:playerName||null,p_avatar_url:avatarUrl||null}),signal:AbortSignal.timeout(10000)});
+  const r=await fetch(SUPABASE_URL+"/rest/v1/rpc/register_kingshot_player_v2",{method:"POST",headers:{"apikey":SUPABASE_KEY,"authorization":"Bearer "+SUPABASE_KEY,"content-type":"application/json"},body:JSON.stringify({p_player_id:playerId,p_kingdom_id:kingdomId||null,p_player_name:playerName||null,p_avatar_url:avatarUrl||null}),signal:AbortSignal.timeout(10000)});
   const d=await r.json().catch(()=>null);
   if(!r.ok)return res.status(502).json({error:d?.message||d?.hint||"Could not register this player."});
-  return res.status(200).json({registered:true,player:d});
+  const result=Array.isArray(d)?d[0]:d;
+  return res.status(200).json({registered:true,alreadyRegistered:Boolean(result?.already_registered),player:result?.player||result});
  }catch(e){return res.status(504).json({error:"Registration service timed out."})}
 }
