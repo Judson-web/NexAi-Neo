@@ -4,7 +4,9 @@ const labels={SUCCESS:["Redeemed successfully.","Your gift rewards should be ava
 export default async function handler(req,res){
  if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
  const body=req.body||{};const fid=clean(body.playerId),code=clean(body.code),kid=clean(body.kid);
- if(!/^\d{5,20}$/.test(fid))return res.status(400).json({error:"Invalid player ID."});\n if(!/^\d{1,10}$/.test(kid))return res.status(400).json({error:"Invalid kingdom ID."});\n if(!/^[A-Za-z0-9_-]{1,64}$/.test(code))return res.status(400).json({error:"Invalid gift code."});
+ if(!/^\d{5,20}$/.test(fid))return res.status(400).json({error:"Invalid player ID."});
+ if(!/^\d{1,10}$/.test(kid))return res.status(400).json({error:"Invalid kingdom ID."});
+ if(!/^[A-Za-z0-9_-]{1,64}$/.test(code))return res.status(400).json({error:"Invalid gift code."});
  const secret=process.env.KINGSHOT_API_SECRET;if(!secret)return res.status(503).json({error:"Kingshot redemption secret is not configured on the server."});
  const payload={fid,cdk:code,kid,time:String(Math.floor(Date.now()/1000))};
  const encoded=Object.keys(payload).sort().map(k=>k+"="+payload[k]).join("&");
