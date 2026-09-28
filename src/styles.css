@@ -157,3 +157,14 @@
  .admin-badge{font-size:8px}
  .admin-player-list{max-height:62vh}
 }
+
+
+/* Shared GitHub profile chip */
+.header-right{display:flex;align-items:center;gap:9px}
+.site-github-credit{flex:none}
+@media(max-width:680px){
+ .header-right{gap:6px}
+ .site-github-credit{padding:3px}
+ .site-github-credit img{width:29px;height:29px}
+ .site-github-credit span,.site-github-credit svg{display:none}
+}
