@@ -1,6 +1,7 @@
 const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
 const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4TYTujQh8w5NyAJA_3H2K5CEg";
 const GIFT_SOURCE_URL="https://kingshot.net/api/gift-codes";
+import {redeemKingshot} from"../lib/kingshot-redeem.js";
 
 async function rpc(name,body){
  const r=await fetch(SUPABASE_URL+"/rest/v1/rpc/"+name,{method:"POST",headers:{"apikey":SUPABASE_KEY,"authorization":"Bearer "+SUPABASE_KEY,"content-type":"application/json"},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
@@ -47,8 +48,6 @@ export default async function handler(req,res){
   const players=await rpc("list_kingshot_autoredeem_players",{});
   const list=Array.isArray(players)?players:[];
   let attempted=0,success=0,skipped=0,alreadyHandled=0;
-  const base="https://"+(process.env.VERCEL_URL||"nex-ai-neo-2um9.vercel.app");
-
   for(const player of list){
    const history=await rpc("list_kingshot_player_redemptions",{p_player_id:player.player_id});
    const handled=new Set(
@@ -65,8 +64,7 @@ export default async function handler(req,res){
 
     const claimed=await rpc("claim_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code});
     if(!claimed){skipped++;continue}
-    const rr=await fetch(base+"/api/kingshot-redeem",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({playerId:player.player_id,code:item.code,kid:player.kingdom_id}),signal:AbortSignal.timeout(35000)});
-    const d=await rr.json().catch(()=>({error:"Invalid redemption response"}));
+    const d=await redeemKingshot({playerId:player.player_id,code:item.code,kid:player.kingdom_id});
     attempted++;
     const status=String(d?.status||"ERROR").toUpperCase();
     await rpc("record_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code,p_status:status,p_err_code:d?.errCode??null,p_message:d?.message||d?.error||null});
