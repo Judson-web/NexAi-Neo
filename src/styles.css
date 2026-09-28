@@ -57,3 +57,40 @@
 .admin-empty{padding:35px;text-align:center;color:#626976;font-size:10px}
 @media(max-width:800px){.admin-table{overflow-x:auto}.admin-table-head,.admin-row{min-width:760px}.admin-head{align-items:flex-start;flex-direction:column}.admin-actions{width:100%}.admin-actions button{flex:1;justify-content:center}}
 @media(max-width:680px){.admin-app header{width:calc(100% - 24px)}.admin-hero{padding:76px 0 90px}.admin-panel{padding:55px 0 70px}.admin-head h1{font-size:42px}.admin-stats{grid-template-columns:1fr 1fr}}
+
+.admin-login-icon{width:44px;height:44px;margin:0 auto 2px;display:grid;place-items:center;border:1px solid #3b3327;border-radius:12px;background:#17130d;color:#d5a85c}
+.admin-section{margin-top:24px;padding:18px;border:1px solid #20232d;border-radius:15px;background:#0c0e13}
+.admin-section-title{display:flex;align-items:center;gap:8px;margin-bottom:12px;color:#c7c2ce;font-size:11px;font-weight:800}
+.admin-section-title svg{color:#d5a85c}
+.admin-ticket{padding:13px;border:1px solid #1e222b;border-radius:11px;background:#0f1116;margin-top:8px;display:flex;justify-content:space-between;gap:14px}
+.admin-ticket.pending{border-color:#4a3a22}
+.admin-ticket-top{display:flex;align-items:center;gap:8px}
+.admin-ticket-top code{color:#b09adf;font:9px ui-monospace,SFMono-Regular,Menlo,monospace}
+.admin-ticket-top span{font-size:7px;font-weight:850;letter-spacing:.1em;color:#d5a85c}
+.admin-ticket p{margin:7px 0;color:#a7aab4;font-size:10px;line-height:1.55;max-width:650px}
+.admin-ticket small{color:#555c68;font-size:7px}
+.admin-ticket-actions{display:flex;flex-direction:column;gap:6px;flex:none}
+.admin-ticket-actions button,.admin-revoke{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid #332d25;border-radius:8px;background:#15130f;color:#c8a96d;padding:8px 10px;font-size:8px;font-weight:750}
+.admin-ticket-actions button:last-child{border-color:#292c34;background:#111319;color:#858b97}
+.admin-user-card{border:1px solid #1e222b;border-radius:11px;background:#0f1116;overflow:hidden;margin-top:8px}
+.admin-user-card.open{border-color:#3a3328}
+.admin-user-summary{width:100%;display:flex;align-items:center;gap:12px;padding:11px 12px;border:0;background:none;color:inherit;text-align:left}
+.admin-user-summary .admin-player{flex:1}
+.admin-user-summary>svg{color:#606673;transition:transform .2s}
+.admin-user-card.open .admin-user-summary>svg{transform:rotate(180deg)}
+.admin-user-details{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:12px;border-top:1px solid #1e222b}
+.admin-user-details>div{padding:9px;border:1px solid #20242d;border-radius:8px;background:#0b0d12}
+.admin-user-details small{display:block;color:#505764;font-size:6px;font-weight:850;letter-spacing:.12em}
+.admin-user-details b{display:block;margin-top:4px;color:#b9bec8;font-size:9px;word-break:break-word}
+.admin-revoke{grid-column:1/-1;color:#d88d98;border-color:#432b31;background:#171014}
+.ks-support{width:min(760px,100%);margin:25px auto 0;padding:20px;border:1px solid #242730;border-radius:15px;background:#0d0f14}
+.ks-support-copy{margin:-8px 0 16px;color:#686f7c;font-size:10px;line-height:1.6}
+.ks-support-form{display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px;align-items:end}
+.ks-support-reason{display:block}
+.ks-support-reason>span{display:block;margin:0 0 6px;color:#5f626d;font-size:7px;font-weight:850;letter-spacing:.16em}
+.ks-support-reason textarea{width:100%;min-height:54px;resize:vertical;padding:11px;border:1px solid #292a32;border-radius:10px;outline:0;background:#101116;color:#fff;font:10px inherit}
+.ks-support-reason textarea:focus{border-color:#8f6d38}
+.ks-support-form .ks-submit{height:54px;white-space:nowrap}
+.ks-support-success{margin-top:10px;display:flex;align-items:center;gap:7px;padding:10px 12px;border:1px solid #284331;border-radius:9px;background:#101a14;color:#8bc49e;font-size:9px}
+@media(max-width:800px){.ks-support-form{grid-template-columns:1fr}.ks-support-form .ks-submit{height:48px}.admin-ticket{flex-direction:column}.admin-ticket-actions{flex-direction:row}.admin-ticket-actions button{flex:1}.admin-user-details{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.ks-support{padding:15px}.admin-section{padding:13px}.admin-user-details{grid-template-columns:1fr}.admin-revoke{grid-column:auto}}
