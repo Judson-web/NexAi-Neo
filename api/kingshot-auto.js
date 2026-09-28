@@ -1,7 +1,6 @@
 const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
 const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4TYTujQh8w5NyAJA_3H2K5CEg";
 const GIFT_SOURCE_URL="https://kingshot.net/api/gift-codes";
-const NEW_CODE_WINDOW_MS=6*60*60*1000;
 
 async function rpc(name,body){
  const r=await fetch(SUPABASE_URL+"/rest/v1/rpc/"+name,{method:"POST",headers:{"apikey":SUPABASE_KEY,"authorization":"Bearer "+SUPABASE_KEY,"content-type":"application/json"},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
@@ -25,6 +24,8 @@ function normalizeCodes(data){
  }).filter(Boolean).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
 }
 
+const HANDLED_STATUSES=new Set(["SUCCESS","RECEIVED","SAME TYPE EXCHANGE","TIME_ERROR","CDK_NOT_FOUND","USAGE_LIMIT"]);
+
 export default async function handler(req,res){
  if(!["GET","POST"].includes(req.method))return res.status(405).json({error:"Method not allowed"});
  const cronSecret=process.env.CRON_SECRET;
@@ -45,32 +46,34 @@ export default async function handler(req,res){
   const codes=normalizeCodes(data);
   const players=await rpc("list_kingshot_autoredeem_players",{});
   const list=Array.isArray(players)?players:[];
-  const now=Date.now();
-  let attempted=0,success=0,skipped=0;
+  let attempted=0,success=0,skipped=0,alreadyHandled=0;
   const base="https://"+(process.env.VERCEL_URL||"nex-ai-neo-2um9.vercel.app");
 
-  for(const item of codes){
-   await rpc("upsert_kingshot_gift_code",{p_code:item.code,p_source_date:item.createdAt&&!Number.isNaN(item.createdAt)?new Date(item.createdAt).toISOString().slice(0,10):null});
-   const codeIsNew=item.createdAt&&!Number.isNaN(item.createdAt)&&(now-item.createdAt)<=NEW_CODE_WINDOW_MS;
+  for(const player of list){
+   const history=await rpc("list_kingshot_player_redemptions",{p_player_id:player.player_id});
+   const handled=new Set(
+    (Array.isArray(history)?history:[])
+     .filter(row=>HANDLED_STATUSES.has(String(row?.status||"").toUpperCase()))
+     .map(row=>String(row?.gift_code||"").toUpperCase())
+   );
 
-   for(const player of list){
-    const lastRedeemAt=player.last_redeem_at?Date.parse(player.last_redeem_at):NaN;
-    const playerIsNew=Number.isNaN(lastRedeemAt);
-
-    // Existing players only receive recently published codes. A newly registered
-    // player gets the current active catalogue once, so registration also works
-    // when the code predates the registration.
-    if(!codeIsNew&&!playerIsNew){skipped++;continue}
+   for(const item of codes){
+    if(handled.has(item.code.toUpperCase())){
+     alreadyHandled++;
+     continue;
+    }
 
     const rr=await fetch(base+"/api/kingshot-redeem",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({playerId:player.player_id,code:item.code,kid:player.kingdom_id}),signal:AbortSignal.timeout(35000)});
     const d=await rr.json().catch(()=>({error:"Invalid redemption response"}));
     attempted++;
-    await rpc("record_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code,p_status:d?.status||"ERROR",p_err_code:d?.errCode??null,p_message:d?.message||d?.error||null});
-    if(d?.status==="SUCCESS")success++;
+    const status=String(d?.status||"ERROR").toUpperCase();
+    await rpc("record_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code,p_status:status,p_err_code:d?.errCode??null,p_message:d?.message||d?.error||null});
+    if(status==="SUCCESS")success++;
+    if(HANDLED_STATUSES.has(status))handled.add(item.code.toUpperCase());
    }
   }
 
-  return res.status(200).json({ok:true,source:"kingshot.net",codes:codes.length,players:list.length,attempted,skipped,success});
+  return res.status(200).json({ok:true,source:"kingshot.net",codes:codes.length,players:list.length,attempted,alreadyHandled,skipped,success});
  }catch(e){
   console.error("Kingshot auto redeem:",e);
   return res.status(502).json({error:e.message||"Auto redemption failed."});
