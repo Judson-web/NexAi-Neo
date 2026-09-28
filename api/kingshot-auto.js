@@ -63,6 +63,8 @@ export default async function handler(req,res){
      continue;
     }
 
+    const claimed=await rpc("claim_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code});
+    if(!claimed){skipped++;continue}
     const rr=await fetch(base+"/api/kingshot-redeem",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({playerId:player.player_id,code:item.code,kid:player.kingdom_id}),signal:AbortSignal.timeout(35000)});
     const d=await rr.json().catch(()=>({error:"Invalid redemption response"}));
     attempted++;
