@@ -34,21 +34,21 @@ async function redeemForPlayer(player,codes){
  const handled=new Set((Array.isArray(history)?history:[])
   .filter(row=>HANDLED_STATUSES.has(String(row?.status||"").toUpperCase()))
   .map(row=>String(row?.gift_code||"").toUpperCase()));
- let attempted=0,success=0,alreadyHandled=0,skipped=0;
 
- // Keep one redemption at a time per player to avoid Kingshot's TOO FREQUENT response.
- for(const item of codes){
-  if(handled.has(item.code.toUpperCase())){alreadyHandled++;continue}
-  const claimed=await rpc("claim_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code});
-  if(!claimed){skipped++;continue}
-  const d=await redeemKingshot({playerId:player.player_id,code:item.code,kid:player.kingdom_id});
-  attempted++;
-  const status=String(d?.status||"ERROR").toUpperCase();
-  await rpc("record_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code,p_status:status,p_err_code:d?.errCode??null,p_message:d?.message||d?.error||null});
-  if(status==="SUCCESS")success++;
-  if(HANDLED_STATUSES.has(status))handled.add(item.code.toUpperCase());
- }
- return {attempted,success,alreadyHandled,skipped};
+ // Process only the newest outstanding code for each player per run.
+ // This keeps the request comfortably below pg_net's 5s HTTP timeout and
+ // respects Kingshot's per-player TOO FREQUENT rate limit. Older missed
+ // active codes are picked up on subsequent runs.
+ const item=codes.find(code=>!handled.has(code.code.toUpperCase()));
+ if(!item)return {attempted:0,success:0,alreadyHandled:codes.length,skipped:0};
+
+ const claimed=await rpc("claim_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code});
+ if(!claimed)return {attempted:0,success:0,alreadyHandled:0,skipped:1};
+
+ const d=await redeemKingshot({playerId:player.player_id,code:item.code,kid:player.kingdom_id});
+ const status=String(d?.status||"ERROR").toUpperCase();
+ await rpc("record_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code,p_status:status,p_err_code:d?.errCode??null,p_message:d?.message||d?.error||null});
+ return {attempted:1,success:status==="SUCCESS"?1:0,alreadyHandled:0,skipped:0};
 }
 
 async function runWithConcurrency(players,fn,limit){
