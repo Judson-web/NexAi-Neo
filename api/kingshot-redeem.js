@@ -4,7 +4,7 @@ const labels={SUCCESS:["Redeemed successfully.","Your gift rewards should be ava
 export default async function handler(req,res){
  if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
  const body=req.body||{};const fid=clean(body.playerId),code=clean(body.code),kid=clean(body.kid);
- if(!/^\\d{5,20}$/.test(fid)||!/^\\d{1,8}$/.test(kid)||!/^[A-Za-z0-9_-]{1,64}$/.test(code))return res.status(400).json({error:"Invalid player ID, kingdom, or gift code."});
+ if(!/^\d{5,20}$/.test(fid)||!/^\d{1,8}$/.test(kid)||!/^[A-Za-z0-9_-]{1,64}$/.test(code))return res.status(400).json({error:"Invalid player ID, kingdom, or gift code."});
  const secret=process.env.KINGSHOT_API_SECRET;if(!secret)return res.status(503).json({error:"Kingshot redemption secret is not configured on the server."});
  const payload={fid,cdk:code,kid,time:String(Math.floor(Date.now()/1000))};
  const encoded=Object.keys(payload).sort().map(k=>k+"="+payload[k]).join("&");
@@ -13,7 +13,7 @@ export default async function handler(req,res){
   const r=await fetch("https://kingshot-giftcode.centurygame.com/api/gift_code",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded","user-agent":"Mozilla/5.0"},body:new URLSearchParams({...payload,sign}),signal:AbortSignal.timeout(30000)});
   const d=await r.json().catch(()=>({}));
   if([429,502,503,504].includes(r.status))return res.status(503).json({error:"Kingshot is rate-limiting or temporarily unavailable. Try again shortly."});
-  const msg=String(d.msg||"Unknown Error").replace(/\\.$/,"").toUpperCase();
+  const msg=String(d.msg||"Unknown Error").replace(/\.$/,"").toUpperCase();
   let status=msg;
   if(msg==="RECEIVED"&&d.err_code===40008)status="RECEIVED";
   if(msg==="SAME TYPE EXCHANGE"&&d.err_code===40011)status="SAME TYPE EXCHANGE";
