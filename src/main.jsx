@@ -1,6 +1,6 @@
 import React,{useEffect,useState}from"react";
 import{createRoot}from"react-dom/client";
-import{Copy,Download,ExternalLink,Image as ImageIcon,Link2,Menu,Search,ShieldCheck,Sparkles,X}from"lucide-react";
+import{Copy,Download,ExternalLink,Gift,Image as ImageIcon,Link2,Menu,Search,ShieldCheck,Sparkles,X,CheckCircle,LoaderCircle}from"lucide-react";
 import"./styles.css";
 
 const HISTORY_KEY="pfp-history";
@@ -29,6 +29,19 @@ function App(){
  <footer><Logo/><span>Uses public Discord profile data. Not affiliated with Discord.</span></footer>{toast&&<div className="toast">{toast}</div>}</div>
 }
 
+function KingshotApp(){
+ const [playerId,setPlayerId]=useState(""),[code,setCode]=useState(""),[player,setPlayer]=useState(null),[busy,setBusy]=useState(false),[result,setResult]=useState(null),[error,setError]=useState("");
+ const lookup=async()=>{const id=playerId.trim();if(!/^\\d{5,20}$/.test(id)){setError("Enter a valid Kingshot Player ID.");return}setBusy(true);setError("");setResult(null);try{const r=await fetch("/api/kingshot-player?id="+encodeURIComponent(id));const d=await r.json();if(!r.ok)throw Error(d.error||"Could not find this player.");setPlayer(d.player||d)}catch(e){setPlayer(null);setError(e.message||"Player lookup failed.")}finally{setBusy(false)}};
+ const redeem=async e=>{e.preventDefault();const id=playerId.trim(),gift=code.trim();if(!/^\\d{5,20}$/.test(id)){setError("Enter a valid Kingshot Player ID.");return}if(!gift||gift.length>64){setError("Enter a valid gift code.");return}setBusy(true);setError("");setResult(null);try{let p=player;if(!p||String(p.governor_id||p.fid||p.id)!==id){const pr=await fetch("/api/kingshot-player?id="+encodeURIComponent(id));const pd=await pr.json();if(!pr.ok)throw Error(pd.error||"Could not find this player.");p=pd.player||pd;setPlayer(p)}const r=await fetch("/api/kingshot-redeem",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({playerId:id,code:gift,kid:p.kid})});const d=await r.json();if(!r.ok)throw Error(d.error||"Redemption failed.");setResult(d)}catch(e){setError(e.message||"Redemption failed.")}finally{setBusy(false)}};
+ return <div className="app ks-app"><header><Logo/><nav><a href="#redeem">Redeem</a><a href="#how">How it works</a><a href="/extract">PFP Extractor</a></nav><button className="menu-btn" onClick={()=>{}} aria-label="Menu"><Menu size={18}/></button></header>
+ <main><section className="ks-hero" id="redeem"><div className="eyebrow"><span/>KINGSHOT GIFT CODE REDEEMER</div><h1>Claim your rewards.<br/><em>Automatically.</em></h1><p className="hero-copy">Enter your Kingshot Player ID and gift code. We’ll look up your kingdom through MightPulse, then submit the redemption securely from the server.</p>
+ <form className="ks-form" onSubmit={redeem}><div className="ks-field"><label>PLAYER ID</label><div><Search size={16}/><input inputMode="numeric" value={playerId} onChange={e=>{setPlayerId(e.target.value.replace(/\\D/g,""));setPlayer(null);setResult(null)}} placeholder="e.g. 43180889"/></div></div><div className="ks-field"><label>GIFT CODE</label><div><Gift size={16}/><input value={code} onChange={e=>setCode(e.target.value.replace(/\\s/g,""))} placeholder="e.g. VIP777" autoCapitalize="characters"/></div></div><button className="ks-submit" disabled={busy}>{busy?<><LoaderCircle size={16} className="spin"/> Processing…</>:"Redeem Gift Code"}</button></form>
+ {error&&<div className="ks-error"><b>Couldn’t redeem that code.</b><span>{error}</span></div>}
+ {player&&<div className="ks-player"><div className="ks-avatar">{player.avatar_url?<img src={player.avatar_url} alt=""/>:<span>{(player.nick_name||"K").slice(0,1)}</span>}</div><div><b>{player.nick_name||"Kingshot Player"}</b><span>Kingdom {player.kid ?? "—"} · TC {player.town_center_level ?? "—"}</span></div><CheckCircle size={17}/></div>}
+ {result&&<div className={"ks-result "+(result.status==="SUCCESS"||result.status==="RECEIVED"||result.status==="SAME TYPE EXCHANGE"?"success":"") }><CheckCircle size={22}/><div><b>{result.statusLabel||result.status}</b><span>{result.message||"Redemption request completed."}</span></div></div>}
+ </section><section className="ks-how" id="how"><div className="section-title"><span>01</span><h2>Simple by design.</h2></div><div className="feature-grid"><article><Search/><b>1. Find your player</b><p>Your Player ID is used to retrieve the current kingdom from MightPulse.</p></article><article><Gift/><b>2. Submit the code</b><p>The redemption request is signed server-side. Your signing secret is never exposed.</p></article><article><CheckCircle/><b>3. Get the result</b><p>We translate the game API response into a clear redemption status.</p></article></div></section></main><footer><Logo/><span>MightPulse is an independent Kingshot community service. Not affiliated with Century Games.</span></footer></div>
+}
+
 function Result({user,copy}){
  const defaultFormat=user.animated?"gif":(user.format||"png"),[quality,setQuality]=useState(1024),[format,setFormat]=useState(defaultFormat),[status,setStatus]=useState("loaded");
  const availableFormats=user.animated?["gif"]:["png","jpg","webp"];
@@ -45,4 +58,4 @@ function Result({user,copy}){
  </section>
 }
 
-createRoot(document.getElementById("root")).render(<App/>);
+createRoot(document.getElementById("root")).render(location.pathname==="/"?<KingshotApp/>:<App/>);
