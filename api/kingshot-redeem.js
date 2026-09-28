@@ -5,7 +5,7 @@ export default async function handler(req,res){
  if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
  const body=req.body||{};const fid=clean(body.playerId),code=clean(body.code),kid=clean(body.kid);
  if(!/^\\d{5,20}$/.test(fid)||!/^\\d{1,8}$/.test(kid)||!/^[A-Za-z0-9_-]{1,64}$/.test(code))return res.status(400).json({error:"Invalid player ID, kingdom, or gift code."});
- const secret=process.env.KINGSHOT_API_SECRET||"mN4!pQs6JrYwV9";
+ const secret=process.env.KINGSHOT_API_SECRET;if(!secret)return res.status(503).json({error:"Kingshot redemption secret is not configured on the server."});
  const payload={fid,cdk:code,kid,time:String(Math.floor(Date.now()/1000))};
  const encoded=Object.keys(payload).sort().map(k=>k+"="+payload[k]).join("&");
  const sign=crypto.createHash("md5").update(encoded+secret).digest("hex");
