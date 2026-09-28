@@ -13,7 +13,7 @@ const normalize=v=>{const s=String(v||"").trim();const m=s.match(/(?:discord(?:a
 const imageUrl=(user,size=1024,format=user.format)=>"/api/discord-avatar?id="+encodeURIComponent(user.id)+"&hash="+encodeURIComponent(user.avatar)+"&format="+encodeURIComponent(format)+"&size="+encodeURIComponent(size);
 const getInitialId=()=>{const p=new URLSearchParams(location.search).get("id");return normalize(p)||normalize(location.pathname.match(/^\/user\/(\d{15,22})$/)?.[1]||"")};
 function PfpLogo(){return <a className="brand" href="/extract"><span className="brand-mark">D</span><span>Discord PFP Extractor</span></a>}
-const KINGSHOT_ICON="https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/74/27/3e/74273e55-e367-907a-2c85-1a687dc1f8ca/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/1200x630wa.png";
+const KINGSHOT_ICON="https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/ee/d2/22/eed22297-9313-d8b0-52c8-95f42a2795b2/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/0x0ss-85.png";
 function KsLogo(){return <a className="brand ks-brand" href="/"><span className="brand-mark ks-brand-mark"><img src={KINGSHOT_ICON} alt="Kingshot"/></span><span>Kingshot Redeemer</span></a>}
 function GitHubChip(){return <a className="admin-credit site-github-credit" href="https://github.com/Judson-web" target="_blank" rel="noreferrer" aria-label="Judson on GitHub"><img src="https://github.com/Judson-web.png?size=96" alt="Judson"/><span>Judson</span><Github size={13}/></a>}
 
