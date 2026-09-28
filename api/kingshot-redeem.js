@@ -10,8 +10,13 @@ export default async function handler(req,res){
  const encoded=Object.keys(payload).sort().map(k=>k+"="+payload[k]).join("&");
  const sign=crypto.createHash("md5").update(encoded+secret).digest("hex");
  try{
-  const r=await fetch("https://kingshot-giftcode.centurygame.com/api/gift_code",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded","user-agent":"Mozilla/5.0"},body:new URLSearchParams({...payload,sign}),signal:AbortSignal.timeout(30000)});
-  const d=await r.json().catch(()=>({}));
+  const r=await fetch("https://kingshot-giftcode.centurygame.com/api/gift_code",{method:"POST",headers:{"accept":"application/json, text/plain, */*","accept-encoding":"gzip, deflate","accept-language":"en-US,en;q=0.9","content-type":"application/x-www-form-urlencoded","origin":"https://kingshot-giftcode.centurygame.com","referer":"https://kingshot-giftcode.centurygame.com/","sec-fetch-dest":"empty","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"},body:new URLSearchParams({...payload,sign}),signal:AbortSignal.timeout(30000)});
+  const raw=await r.text();
+  let d={};
+  try{d=JSON.parse(raw)}catch{
+   const snippet=raw.replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim().slice(0,180);
+   return res.status(502).json({error:snippet?"Kingshot returned a non-JSON response: "+snippet:"Kingshot returned an invalid response."});
+  }
   if([429,502,503,504].includes(r.status))return res.status(503).json({error:"Kingshot is rate-limiting or temporarily unavailable. Try again shortly."});
   const msg=String(d.msg||"Unknown Error").replace(/\.$/,"").toUpperCase();
   let status=msg;
