@@ -2,6 +2,7 @@ import React,{useEffect,useState}from"react";
 import{createRoot}from"react-dom/client";
 import{Copy,Download,ExternalLink,Gift,Image as ImageIcon,Link2,Menu,Search,ShieldCheck,Sparkles,X,CheckCircle,LoaderCircle}from"lucide-react";
 import"./styles.css";
+import AdminApp from"./AdminApp.jsx";
 
 const HISTORY_KEY="pfp-history";
 const readHistory=()=>{try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]").filter(x=>/^\d{15,22}$/.test(x)).slice(0,6)}catch{return[]}};
@@ -69,4 +70,4 @@ function Result({user,copy}){
  </section>
 }
 
-createRoot(document.getElementById("root")).render(location.pathname==="/auto"?<AutoRedeemApp/>:location.pathname==="/redeem"||location.pathname==="/"?<KingshotApp/>:<App/>);
+createRoot(document.getElementById("root")).render(location.pathname==="/auto"?<AutoRedeemApp/>:location.pathname==="/redeem"||location.pathname==="/"?<KingshotApp/>:location.pathname==="/ks-admin"?<AdminApp/>:<App/>);
