@@ -39,11 +39,5 @@
         }
       ]
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/kingshot-auto",
-      "schedule": "*/10 * * * *"
-    }
   ]
 }
