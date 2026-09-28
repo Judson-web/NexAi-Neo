@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowLeft, ShieldCheck, Scale, Database, Gamepad2, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Database, Image as ImageIcon } from "lucide-react";
 
 const ICON_URL="https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/ee/d2/22/eed22297-9313-d8b0-52c8-95f42a2795b2/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/0x0ss-85.png";
 
@@ -55,7 +55,7 @@ export default function LegalApp({type}){
           <p>This website is an independent community project created by Judson. It is not operated, sponsored, endorsed, or affiliated with Century Games or Kingshot.</p>
         </article>
         <article className="legal-card">
-          <div className="legal-card-icon"><Gamepad2 size={17}/></div>
+          <div className="legal-card-icon"><ShieldCheck size={17}/></div>
           <h2>Game ownership</h2>
           <p>Kingshot, its game content, artwork, logos, icons, characters, and related intellectual property belong to Century Games Pte. Ltd. and/or its licensors. We use the Kingshot name and icon only to identify the game supported by this community tool.</p>
         </article>
@@ -93,7 +93,7 @@ export default function LegalApp({type}){
           <p>These terms and notices may be updated when the service or its data practices change. The date shown below identifies the current revision.</p>
         </>}
         <div className="legal-source">
-          <Scale size={15}/>
+          <ShieldCheck size={15}/>
           <span>For the official Century Games terms and privacy policy, visit <a href="https://www.centurygames.com/terms-of-service/" target="_blank" rel="noreferrer">Century Games Terms of Service</a> and <a href="https://www.centurygames.com/privacy-policy/" target="_blank" rel="noreferrer">Century Games Privacy Policy</a>.</span>
         </div>
         <p className="legal-note">This page is an informational notice for this independent community service and is not legal advice. Effective: September 28, 2026.</p>
