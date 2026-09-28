@@ -15,7 +15,7 @@ const getInitialId=()=>{const p=new URLSearchParams(location.search).get("id");r
 function PfpLogo(){return <a className="brand" href="/extract"><span className="brand-mark">D</span><span>Discord PFP Extractor</span></a>}
 const KINGSHOT_ICON="https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/ee/d2/22/eed22297-9313-d8b0-52c8-95f42a2795b2/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/0x0ss-85.png";
 function KsLogo(){return <a className="brand ks-brand" href="/"><span className="brand-mark ks-brand-mark"><img src={KINGSHOT_ICON} alt="Kingshot"/></span><span>Kingshot Redeemer</span></a>}
-function GitHubChip(){return <a className="admin-credit site-github-credit" href="https://github.com/Judson-web" target="_blank" rel="noreferrer" aria-label="Judson on GitHub"><img src="https://github.com/Judson-web.png?size=96" alt="Judson"/><span>Judson</span><Github size={13}/></a>}
+function GitHubChip(){return <a className="admin-credit site-github-credit" href="https://discord.com/channels/@me/871756466900598815" target="_blank" rel="noreferrer" aria-label="Message Judson on Discord"><img src="https://github.com/Judson-web.png?size=96" alt="Judson"/><span>Judson</span></a>}
 
 function App(){
  const initial=getInitialId();
