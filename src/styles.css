@@ -94,3 +94,45 @@
 .ks-support-success{margin-top:10px;display:flex;align-items:center;gap:7px;padding:10px 12px;border:1px solid #284331;border-radius:9px;background:#101a14;color:#8bc49e;font-size:9px}
 @media(max-width:800px){.ks-support-form{grid-template-columns:1fr}.ks-support-form .ks-submit{height:48px}.admin-ticket{flex-direction:column}.admin-ticket-actions{flex-direction:row}.admin-ticket-actions button{flex:1}.admin-user-details{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.ks-support{padding:15px}.admin-section{padding:13px}.admin-user-details{grid-template-columns:1fr}.admin-revoke{grid-column:auto}}
+
+
+/* Support inbox polish */
+.admin-section-title{position:relative}
+.admin-section-count{margin-left:auto;padding:5px 8px;border:1px solid #3b3327;border-radius:999px;background:#17130d;color:#d5a85c;font-size:7px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+.admin-ticket{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0;margin-top:9px;padding:0;overflow:hidden;border:1px solid #20242d;border-radius:14px;background:linear-gradient(145deg,#111319,#0d0f14);transition:border-color .2s,transform .2s,background .2s}
+.admin-ticket.pending{border-color:#493a24}
+.admin-ticket:hover{border-color:#3b3e49;background:linear-gradient(145deg,#13151b,#0f1117)}
+.admin-ticket.resolved{opacity:.72}
+.admin-ticket-main{min-width:0;padding:15px}
+.admin-ticket-heading{display:flex;align-items:center;gap:10px}
+.admin-ticket-icon{width:34px;height:34px;display:grid;place-items:center;flex:none;border:1px solid #3b3327;border-radius:10px;background:#17130d;color:#d5a85c}
+.admin-ticket.resolved .admin-ticket-icon{border-color:#283a2e;background:#101a14;color:#79b58c}
+.admin-ticket-title{min-width:0;flex:1}
+.admin-ticket-title>div{display:flex;align-items:center;gap:8px;min-width:0}
+.admin-ticket-title b{color:#e2dfe6;font-size:11px;font-weight:800}
+.admin-ticket-title small{display:flex;align-items:center;gap:6px;margin-top:4px;color:#5e6572;font-size:8px}
+.admin-ticket-title code{color:#a998d8;font:8px ui-monospace,SFMono-Regular,Menlo,monospace}
+.admin-ticket-title small span{color:#3f444f}
+.admin-ticket-status{padding:4px 7px;border-radius:999px;border:1px solid #3b3327;background:#17130d;color:#d5a85c;font-size:6px;font-weight:900;letter-spacing:.1em}
+.admin-ticket-status.cancelled{border-color:#292c34;background:#111319;color:#7f8693}
+.admin-ticket-status.revoked{border-color:#283a2e;background:#101a14;color:#79b58c}
+.admin-ticket-reason{margin:13px 0 0;padding:11px 12px;border:1px solid #1f232c;border-radius:10px;background:#0b0d12}
+.admin-ticket-reason>span{display:block;color:#505764;font-size:6px;font-weight:900;letter-spacing:.15em}
+.admin-ticket-reason p{margin:5px 0 0;color:#aeb2bc;font-size:10px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.admin-ticket-actions{min-width:138px;display:flex;flex-direction:column;justify-content:center;gap:6px;padding:12px;border-left:1px solid #1f232b;background:#0b0d12}
+.admin-ticket-actions button{width:100%;min-height:35px;padding:8px 9px;border-radius:8px;font-size:8px}
+.admin-ticket-actions .admin-ticket-revoke{border-color:#4a302f;background:#1a1013;color:#d98d97}
+.admin-ticket-actions .admin-ticket-cancel{border-color:#292c34;background:#111319;color:#858b97}
+.admin-ticket-actions button:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.admin-empty{display:flex;align-items:center;justify-content:center;gap:8px;min-height:80px}
+@media(max-width:800px){
+ .admin-ticket{grid-template-columns:1fr}
+ .admin-ticket-actions{min-width:0;display:grid;grid-template-columns:1fr 1fr;border-left:0;border-top:1px solid #1f232b;padding:9px 12px}
+}
+@media(max-width:520px){
+ .admin-section-count{font-size:6px}
+ .admin-ticket-main{padding:13px}
+ .admin-ticket-title b{font-size:10px}
+ .admin-ticket-reason{margin-top:11px;padding:10px}
+ .admin-ticket-actions{grid-template-columns:1fr 1fr}
+}
