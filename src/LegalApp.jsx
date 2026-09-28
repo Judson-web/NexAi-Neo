@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowLeft, ExternalLink, ShieldCheck, Scale, Database, Gamepad2, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Scale, Database, Gamepad2, Image as ImageIcon } from "lucide-react";
 
 const ICON_URL="https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/ee/d2/22/eed22297-9313-d8b0-52c8-95f42a2795b2/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/0x0ss-85.png";
 
