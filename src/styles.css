@@ -136,3 +136,24 @@
  .admin-ticket-reason{margin-top:11px;padding:10px}
  .admin-ticket-actions{grid-template-columns:1fr 1fr}
 }
+
+
+/* Admin header credit + scalable roster */
+.admin-header-right{display:flex;align-items:center;gap:12px}
+.admin-credit{display:flex;align-items:center;gap:7px;padding:4px 8px 4px 4px;border:1px solid #242730;border-radius:999px;background:#0f1116;color:#aeb2bc;text-decoration:none;font-size:9px;font-weight:750;transition:border-color .2s,background .2s,transform .2s}
+.admin-credit:hover{border-color:#3d4050;background:#15171d;color:#fff;transform:translateY(-1px)}
+.admin-credit img{width:25px;height:25px;border-radius:50%;object-fit:cover;border:1px solid #37313f}
+.admin-credit svg{color:#747b89}
+.admin-player-list{max-height:min(68vh,720px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.admin-player-list .admin-user-card{margin-right:2px;margin-left:2px}
+.admin-player-list .admin-user-card:first-child{margin-top:8px}
+.admin-player-list .admin-user-card:last-child{margin-bottom:8px}
+.admin-section-count{margin-left:auto;min-width:24px;text-align:center;padding:4px 7px;border:1px solid #302c38;border-radius:999px;background:#121018;color:#8f84ae;font-size:7px;font-weight:850;letter-spacing:.08em}
+@media(max-width:680px){
+ .admin-header-right{gap:7px}
+ .admin-credit{padding:3px;border-radius:50%}
+ .admin-credit img{width:29px;height:29px}
+ .admin-credit span,.admin-credit svg{display:none}
+ .admin-badge{font-size:8px}
+ .admin-player-list{max-height:62vh}
+}
