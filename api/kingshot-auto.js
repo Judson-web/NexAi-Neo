@@ -2,7 +2,6 @@ const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supab
 const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4TYTujQh8w5NyAJA_3H2K5CEg";
 const GIFT_SOURCE_URL="https://kingshot.net/api/gift-codes";
 const NEW_CODE_WINDOW_MS=6*60*60*1000;
-const NEW_PLAYER_WINDOW_MS=48*60*60*1000;
 
 async function rpc(name,body){
  const r=await fetch(SUPABASE_URL+"/rest/v1/rpc/"+name,{method:"POST",headers:{"apikey":SUPABASE_KEY,"authorization":"Bearer "+SUPABASE_KEY,"content-type":"application/json"},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
@@ -55,8 +54,8 @@ export default async function handler(req,res){
    const codeIsNew=item.createdAt&&!Number.isNaN(item.createdAt)&&(now-item.createdAt)<=NEW_CODE_WINDOW_MS;
 
    for(const player of list){
-    const registeredAt=player.created_at?Date.parse(player.created_at):NaN;
-    const playerIsNew=!Number.isNaN(registeredAt)&&(now-registeredAt)<=NEW_PLAYER_WINDOW_MS;
+    const lastRedeemAt=player.last_redeem_at?Date.parse(player.last_redeem_at):NaN;
+    const playerIsNew=Number.isNaN(lastRedeemAt);
 
     // Existing players only receive recently published codes. A newly registered
     // player gets the current active catalogue once, so registration also works
