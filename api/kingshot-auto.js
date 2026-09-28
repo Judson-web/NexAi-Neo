@@ -82,9 +82,12 @@ export default async function handler(req,res){
   try{data=JSON.parse(raw)}catch{return res.status(502).json({error:"Kingshot gift-code source returned invalid JSON."})}
   if(!feed.ok||data?.status!=="success")throw Error(data?.message||"Kingshot gift-code source failed.");
   const codes=normalizeCodes(data);
+  console.log("Kingshot auto feed:",{total:data?.data?.total??null,active:data?.data?.activeCount??null,normalized:codes.length,codes:codes.map(x=>x.code)});
   const players=await rpc("list_kingshot_autoredeem_players",{});
   const list=Array.isArray(players)?players:[];
+  console.log("Kingshot auto players:",{count:list.length,players:list.map(x=>x.player_id)});
   const results=await runWithConcurrency(list,p=>redeemForPlayer(p,codes),PLAYER_CONCURRENCY);
+  console.log("Kingshot auto results:",results);
   const totals=results.reduce((a,r)=>{
    a.attempted+=(r?.attempted||0);a.success+=(r?.success||0);a.alreadyHandled+=(r?.alreadyHandled||0);a.skipped+=(r?.skipped||0);a.errors+=r?.error?1:0;return a;
   },{attempted:0,success:0,alreadyHandled:0,skipped:0,errors:0});
