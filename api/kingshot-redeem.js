@@ -1,9 +1,9 @@
 import crypto from"node:crypto";
-const clean=s=>String(s??"").replace(/[\\u0000-\\u001F\\u007F]/g,"").trim();
+const clean=s=>String(s??"").replace(/[^\x20-\x7E]/g,"").trim();
 const labels={SUCCESS:["Redeemed successfully.","Your gift rewards should be available in-game."],RECEIVED:["Already received.","This account has already claimed this code."],"SAME TYPE EXCHANGE":["Already claimed.","The code was already redeemed for this reward type."],TIME_ERROR:["Code expired.","This gift code is no longer valid."],CDK_NOT_FOUND:["Code not found.","Check the gift code and try again."],USAGE_LIMIT:["Usage limit reached.","This gift code has reached its redemption limit."],ROLE_NOT_EXIST:["Player not found.","The Player ID and kingdom could not be resolved."],STATE_MISMATCH:["Kingdom mismatch.","The supplied kingdom does not match this player."],SIGN_ERROR:["Redemption unavailable.","The upstream signature was rejected."],TIMEOUT_RETRY:["Try again shortly.","The gift service is rate-limiting or temporarily unavailable."]};
 export default async function handler(req,res){
  if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
- const body=req.body||{};const fid=clean(body.playerId),code=clean(body.code),kid=clean(body.kid);
+ const body=req.body||{};const fid=clean(body.playerId).replace(/\D/g,""),code=clean(body.code),kid=clean(body.kid).replace(/\D/g,"");
  if(!/^\d{5,20}$/.test(fid))return res.status(400).json({error:"Invalid player ID."});
  if(!/^\d{1,10}$/.test(kid))return res.status(400).json({error:"Invalid kingdom ID."});
  if(!/^[A-Za-z0-9_-]{1,64}$/.test(code))return res.status(400).json({error:"Invalid gift code."});
