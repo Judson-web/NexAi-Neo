@@ -233,3 +233,84 @@ html,body,#root{max-width:100%;overflow-x:hidden}
  .admin-ticket-actions{grid-template-columns:1fr}
  .admin-ticket-actions button{min-height:38px}
 }
+
+
+/* Touch-first fallback for Android Chrome Desktop Site.
+   Desktop mode can expose a wide CSS viewport (~980px), so ordinary
+   max-width breakpoints do not fire even though the physical screen is a phone.
+   Keep real desktop screens desktop; only collapse touch-first viewports. */
+@media (hover:none) and (pointer:coarse) and (max-width:1100px){
+  header,main,footer{width:calc(100% - 24px)}
+  header{height:62px}
+  nav{display:none}
+  .menu-btn{display:grid;place-items:center;width:34px;height:34px;border:1px solid #272a35;border-radius:8px;background:#11131a;color:#8c94a3}
+  .mobile-menu{position:absolute;right:12px;top:58px;z-index:20;display:flex;flex-direction:column;min-width:155px;padding:7px;border:1px solid #272a35;border-radius:10px;background:#11131a;box-shadow:0 15px 40px #000b}
+  .mobile-menu a{padding:10px;color:#9da4b0;text-decoration:none;font-size:10px}
+  .brand span:last-child{font-size:12px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .site-github-credit{padding:3px;border-radius:50%}
+  .site-github-credit img{width:29px;height:29px}
+  .site-github-credit span,.site-github-credit svg{display:none}
+
+  .hero,.ks-hero{padding:66px 0 52px}
+  .hero h1,.ks-hero h1{font-size:clamp(42px,8vw,56px)}
+  .hero-copy{max-width:520px;font-size:12px;line-height:1.65;margin-bottom:25px}
+  .extract-box{height:56px;border-radius:14px;padding:6px 6px 6px 13px;gap:8px}
+  .extract-box input{font-size:12px}
+  .extract-btn{height:44px;padding:0 12px;font-size:10px}
+  .hint{font-size:8px}
+
+  .loading-card,.result{margin-top:34px}
+  .loading-card{height:auto;padding:28px 18px;flex-direction:column;gap:18px}
+  .loader-avatar{width:min(65vw,220px);height:min(65vw,220px)}
+  .loader-lines{width:100%}
+  .loader-lines i{width:70%;margin:9px auto}
+  .loader-lines i:nth-child(2){width:45%}
+  .loader-lines i:nth-child(3){width:80%}
+  .result{grid-template-columns:1fr;gap:15px;padding:10px;border-radius:18px}
+  .avatar-stage img{width:88%;height:88%}
+  .result-info{padding:5px 3px 8px}
+  .result-info h2{font-size:25px}
+  .actions{grid-template-columns:1fr 1fr}
+  .actions button:first-child{grid-column:span 2}
+  .features{padding:48px 0 65px}
+  .feature-grid{grid-template-columns:1fr;gap:8px}
+  .feature-grid article{padding:17px}
+  .history-row{display:flex;overflow-x:auto;padding-bottom:5px}
+  .history-row button{min-width:145px}
+  footer{padding:23px 0;align-items:flex-start;flex-direction:column;gap:10px}
+
+  .ks-form{grid-template-columns:1fr}
+  .ks-submit{grid-column:auto;height:48px}
+  .ks-field{height:54px}
+  .ks-how{padding-bottom:65px}
+
+  .admin-panel{padding:48px 0 64px}
+  .admin-head{align-items:flex-start;flex-direction:column;gap:16px}
+  .admin-head h1{font-size:clamp(38px,8vw,48px)}
+  .admin-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}
+  .admin-actions button{min-height:42px;justify-content:center}
+  .admin-stats{grid-template-columns:repeat(3,1fr);gap:6px}
+  .admin-stats div{padding:11px 9px}
+  .admin-section{padding:13px}
+  .admin-ticket{grid-template-columns:1fr}
+  .admin-ticket-actions{display:grid;grid-template-columns:1fr 1fr;min-width:0;border-left:0;border-top:1px solid #1f232b}
+  .admin-user-details{grid-template-columns:1fr 1fr}
+  .admin-player-list{max-height:62vh}
+  .ks-support-form{grid-template-columns:1fr}
+  .ks-support-form .ks-submit{height:48px}
+
+  .pfp-app header{}
+}
+@media (hover:none) and (pointer:coarse) and (max-width:520px){
+  .brand span:last-child{max-width:165px}
+  .hero h1,.ks-hero h1{font-size:40px}
+  .extract-box input{font-size:11px}
+  .extract-btn{padding:0 10px}
+  .actions{grid-template-columns:1fr}
+  .actions button:first-child{grid-column:auto}
+  .meta-grid{grid-template-columns:1fr 1fr}
+  .admin-stats div{padding:10px 7px}
+  .admin-stats b{font-size:16px}
+  .admin-user-details{grid-template-columns:1fr}
+  .admin-ticket-actions{grid-template-columns:1fr}
+}
