@@ -11,7 +11,8 @@ export default async function handler(req,res){
   const session=getCookie(req);if(!session)return res.status(401).json({error:"Unauthorized"});
   const tokenHash=hash(session);
   const valid=await rpc("kingshot_admin_validate_session",{p_token_hash:tokenHash});if(!valid)return res.status(401).json({error:"Unauthorized"});
-  if(req.method==="DELETE"){const body=req.body||{},playerId=String(body.playerId||"").trim();if(!/^[0-9]{5,20}$/.test(playerId))return res.status(400).json({error:"Invalid Player ID."});const ok=await rpc("kingshot_admin_set_player_enabled",{p_token_hash:tokenHash,p_player_id:playerId,p_enabled:false});return res.status(200).json({ok:Boolean(ok)});}\n  if(req.method==="GET"){
+  if(req.method==="DELETE"){const body=req.body||{},playerId=String(body.playerId||"").trim();if(!/^[0-9]{5,20}$/.test(playerId))return res.status(400).json({error:"Invalid Player ID."});const ok=await rpc("kingshot_admin_set_player_enabled",{p_token_hash:tokenHash,p_player_id:playerId,p_enabled:false});return res.status(200).json({ok:Boolean(ok)});}
+  if(req.method==="GET"){
    const [players,tickets]=await Promise.all([rpc("kingshot_admin_list_players",{}),rpc("kingshot_admin_list_tickets",{p_token_hash:tokenHash})]);
    return res.status(200).json({players:Array.isArray(players)?players:[],tickets:Array.isArray(tickets)?tickets:[]});
   }
