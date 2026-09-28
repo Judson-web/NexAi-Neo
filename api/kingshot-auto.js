@@ -10,9 +10,14 @@ async function rpc(name,body){
 }
 
 export default async function handler(req,res){
+ if(!["GET","POST"].includes(req.method))return res.status(405).json({error:"Method not allowed"});
  const cronSecret=process.env.CRON_SECRET;
- if(!cronSecret||req.headers.authorization!=="Bearer "+cronSecret)return res.status(401).json({error:"Unauthorized"});
- if(req.method!=="GET")return res.status(405).json({error:"Method not allowed"});
+ const schedulerToken=req.headers["x-kingshot-scheduler-token"];
+ let authorized=Boolean(cronSecret&&req.headers.authorization==="Bearer "+cronSecret);
+ if(!authorized&&schedulerToken){
+  try{authorized=Boolean(await rpc("verify_kingshot_scheduler_token",{p_token:String(schedulerToken)}))}catch{}
+ }
+ if(!authorized)return res.status(401).json({error:"Unauthorized"});
  const apiKey=process.env.GIFT_CODE_API_KEY;
  if(!apiKey)return res.status(503).json({error:"Gift code distribution API key is not configured."});
  try{
