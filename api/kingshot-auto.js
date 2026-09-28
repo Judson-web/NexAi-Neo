@@ -26,6 +26,28 @@ function normalizeCodes(data){
  }).filter(Boolean).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
 }
 
+function extractPageCodes(html){
+ const seen=new Set(),rows=[];
+ const matches=String(html||"").matchAll(/\/gift-codes\/redeem\?code=([A-Za-z0-9_-]{1,64})/gi);
+ for(const match of matches){
+  const code=decodeURIComponent(match[1]);
+  const key=code.toUpperCase();
+  if(!seen.has(key)){seen.add(key);rows.push({code,expiresAt:null,createdAt:0,source:"page"});}
+ }
+ return rows;
+}
+
+function mergeCodes(apiCodes,pageCodes){
+ const map=new Map();
+ for(const row of [...apiCodes,...pageCodes]){
+  const key=row.code.toUpperCase();
+  const existing=map.get(key);
+  map.set(key,existing?{...existing,expiresAt:existing.expiresAt||row.expiresAt,createdAt:existing.createdAt||row.createdAt,source:existing.source==="api"?"api":"page"}:row);
+ }
+ return [...map.values()].filter(row=>!row.expiresAt||Number.isNaN(row.expiresAt)||row.expiresAt>Date.now())
+  .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+}
+
 const HANDLED_STATUSES=new Set(["SUCCESS","RECEIVED","SAME TYPE EXCHANGE","TIME_ERROR","CDK_NOT_FOUND","USAGE_LIMIT"]);
 const PLAYER_CONCURRENCY=8;
 
@@ -76,13 +98,19 @@ export default async function handler(req,res){
  if(!authorized)return res.status(401).json({error:"Unauthorized"});
 
  try{
-  const feed=await fetch(GIFT_SOURCE_URL,{headers:{"accept":"application/json","user-agent":"Nex-Kingshot-Redeemer/1.0"},signal:AbortSignal.timeout(15000)});
-  const raw=await feed.text();
+  const [apiResponse,pageResponse]=await Promise.all([
+   fetch(GIFT_SOURCE_URL,{headers:{"accept":"application/json","user-agent":"Nex-Kingshot-Redeemer/1.0"},signal:AbortSignal.timeout(15000)}),
+   fetch("https://kingshot.net/gift-codes",{headers:{"accept":"text/html","user-agent":"Nex-Kingshot-Redeemer/1.0"},signal:AbortSignal.timeout(15000)})
+  ]);
+  const raw=await apiResponse.text();
   let data;
-  try{data=JSON.parse(raw)}catch{return res.status(502).json({error:"Kingshot gift-code source returned invalid JSON."})}
-  if(!feed.ok||data?.status!=="success")throw Error(data?.message||"Kingshot gift-code source failed.");
-  const codes=normalizeCodes(data);
-  console.log("Kingshot auto feed:",{total:data?.data?.total??null,active:data?.data?.activeCount??null,normalized:codes.length,codes:codes.map(x=>x.code)});
+  try{data=JSON.parse(raw)}catch{data=null}
+  const apiCodes=apiResponse.ok&&data?.status==="success"?normalizeCodes(data):[];
+  const pageHtml=pageResponse.ok?await pageResponse.text():"";
+  const pageCodes=extractPageCodes(pageHtml);
+  const codes=mergeCodes(apiCodes,pageCodes);
+  if(!codes.length)throw Error("Kingshot gift-code sources returned no active codes.");
+  console.log("Kingshot auto feed:",{apiActive:data?.data?.activeCount??null,apiCodes:apiCodes.map(x=>x.code),pageCodes:pageCodes.map(x=>x.code),merged:codes.map(x=>x.code)});
   const players=await rpc("list_kingshot_autoredeem_players",{});
   const list=Array.isArray(players)?players:[];
   console.log("Kingshot auto players:",{count:list.length,players:list.map(x=>x.player_id)});
