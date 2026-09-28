@@ -1,7 +1,7 @@
 export default async function handler(req,res){
  if(req.method!=="GET")return res.status(405).json({error:"Method not allowed"});
  const id=String(req.query?.id||"").trim();
- if(!/^\\d{5,20}$/.test(id))return res.status(400).json({error:"Invalid player ID."});
+ if(!/^\d{5,20}$/.test(id))return res.status(400).json({error:"Invalid player ID."});
  const key=process.env.MIGHTPULSE_API_KEY||process.env.KSS_API_KEY;
  if(!key)return res.status(503).json({error:"MightPulse API key is not configured on the server."});
  try{
