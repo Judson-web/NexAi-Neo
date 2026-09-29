@@ -84,7 +84,7 @@ export default async function handler(req,res){
    const playerId=String(body.playerId||"").trim();if(!/^[0-9]{5,20}$/.test(playerId))return res.status(400).json({error:"Invalid Player ID."});const ok=await rpc("kingshot_admin_set_player_enabled",{p_token_hash:tokenHash,p_player_id:playerId,p_enabled:false});await audit("REVOKE_PLAYER","player",playerId,{});return res.status(200).json({ok:Boolean(ok)});}
   if(req.method==="GET"){
    const [players,tickets,giftCodes,bannerAds,auditLog,scraperComparison]=await Promise.all([rpc("kingshot_admin_list_players",{}),rpc("kingshot_admin_list_tickets",{p_token_hash:tokenHash}),rpc("kingshot_admin_list_gift_codes",{p_token_hash:tokenHash}),rpc("kingshot_admin_list_banner_ads",{p_token_hash:tokenHash}),rpc("kingshot_admin_list_audit",{p_token_hash:tokenHash,p_limit:100}),rpc("kingshot_admin_scraper_comparison",{p_token_hash:tokenHash})]);
-   return res.status(200).json({players:Array.isArray(players)?players:[],tickets:Array.isArray(tickets)?tickets:[],giftCodes:Array.isArray(giftCodes)?giftCodes:[],bannerAds:Array.isArray(bannerAds)?bannerAds:[]});
+   return res.status(200).json({players:Array.isArray(players)?players:[],tickets:Array.isArray(tickets)?tickets:[],giftCodes:Array.isArray(giftCodes)?giftCodes:[],bannerAds:Array.isArray(bannerAds)?bannerAds:[],auditLog:Array.isArray(auditLog)?auditLog:[],scraperComparison:Array.isArray(scraperComparison)?scraperComparison:[]});
   }
   const body=req.body||{},action=String(body.action||"").toUpperCase(),ticketId=String(body.ticketId||"");
   if(!/^[0-9a-f-]{36}$/.test(ticketId))return res.status(400).json({error:"Invalid ticket."});
