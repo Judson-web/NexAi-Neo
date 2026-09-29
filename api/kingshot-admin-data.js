@@ -32,6 +32,7 @@ export default async function handler(req,res){
   }
   const session=getCookie(req);if(!session)return res.status(401).json({error:"Unauthorized"});
   const tokenHash=hash(session);
+  const audit=async(action,targetType,targetId,details)=>rpc("kingshot_admin_audit",{p_token_hash:tokenHash,p_action:action,p_target_type:targetType||null,p_target_id:targetId||null,p_details:details||{}}).catch(()=>false);
   const valid=await rpc("kingshot_admin_validate_session",{p_token_hash:tokenHash});if(!valid)return res.status(401).json({error:"Unauthorized"});
   if(req.method==="POST"){
    const body=req.body||{};
