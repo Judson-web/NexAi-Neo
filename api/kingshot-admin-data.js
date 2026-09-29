@@ -13,7 +13,7 @@ export default async function handler(req,res){
   const valid=await rpc("kingshot_admin_validate_session",{p_token_hash:tokenHash});if(!valid)return res.status(401).json({error:"Unauthorized"});
   if(req.method==="POST"){
    const body=req.body||{},code=String(body.code||"").trim(),sourceDate=body.sourceDate?String(body.sourceDate).trim():null;
-   if(!/^[A-Za-z0-9_-]{4,64}$/.test(code))return res.status(400).json({error:"Invalid gift code. Use 4-64 letters, numbers, underscores, or hyphens."});
+   if(!/^[A-Za-z0-9]{6,32}$/.test(code)&&/[A-Z]/.test(code)&&(/[0-9]/.test(code)||code===code.toUpperCase()))return res.status(400).json({error:"Invalid gift code. Use 6-32 letters/numbers, with an uppercase letter and either a digit or all-uppercase text."});
    if(sourceDate&&!/^\d{4}-\d{2}-\d{2}$/.test(sourceDate))return res.status(400).json({error:"Invalid source date."});
    const existing=await rpc("kingshot_admin_add_gift_code",{p_token_hash:tokenHash,p_code:code,p_source_date:sourceDate});
    const giftCodes=await rpc("kingshot_admin_list_gift_codes",{p_token_hash:tokenHash});
