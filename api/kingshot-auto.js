@@ -224,22 +224,25 @@ async function updateScraperHealth(source,codeCount,error=null){
  }catch(error){console.error("Scraper health update failed:",source,error?.message||error)}
 }
 
+function classifyError(error){const m=String(error?.message||error||"").toLowerCase();if(/timeout|timed out|abort/.test(m))return"TIMEOUT";if(/unauthorized|forbidden|401|403/.test(m))return"AUTH";if(/429|rate limit|too frequent/.test(m))return"RATE_LIMIT";if(/404|not found/.test(m))return"NOT_FOUND";if(/parse|json|invalid api response/.test(m))return"PARSE";if(/supabase|database|rpc/.test(m))return"DATABASE";if(/mightpulse|player/.test(m))return"UPSTREAM_PLAYER";if(/kingshot|gift|redemption/.test(m))return"UPSTREAM_REDEMPTION";return"UNKNOWN"}
+async function recordScraperRun(source,httpStatus,codes,parseOk,error){await rpc("kingshot_record_scraper_run",{p_source:source,p_http_status:httpStatus,p_code_count:Array.isArray(codes)?codes.length:0,p_codes:Array.isArray(codes)?codes.map(x=>x.code):[],p_parse_ok:Boolean(parseOk),p_error_category:error?classifyError(error):null,p_error_message:error?.message||error||null}).catch(()=>{});}
+
 async function fetchSource(url,kind){
  try{
   const response=await fetch(url,{headers:kind==="api"?{"accept":"application/json","user-agent":"Nex-Kingshot-Redeemer/1.0"}:{"accept":"text/html","user-agent":"Nex-Kingshot-Redeemer/1.0"},signal:AbortSignal.timeout(15000)});
   const body=await response.text();
-  if(!response.ok)throw Error("HTTP "+response.status);
+  if(!response.ok){const error=Error("HTTP "+response.status);await recordScraperRun(kind==="api"?"kingshot-api":"kingshot-page",response.status,[],false,error);throw error;}
   if(kind==="api"){
    let data=null;try{data=JSON.parse(body)}catch{}
    const codes=data?.status==="success"?normalizeCodes(data):[];
-   await updateScraperHealth("kingshot-api",codes.length,data?.status==="success"?null:"Invalid API response");
+   const parseError=data?.status==="success"?null:Error("Invalid API response");\n   await updateScraperHealth("kingshot-api",codes.length,parseError?.message||null);\n   await recordScraperRun("kingshot-api",response.status,codes,data?.status==="success",parseError);
    return {data,codes};
   }
   const codes=extractPageCodes(body);
-  await updateScraperHealth("kingshot-page",codes.length,null);
+  await updateScraperHealth("kingshot-page",codes.length,null);\n  await recordScraperRun("kingshot-page",response.status,codes,true,null);
   return {html:body,codes};
  }catch(error){
-  await updateScraperHealth(kind==="api"?"kingshot-api":"kingshot-page",0,error?.message||"Source request failed");
+  await updateScraperHealth(kind==="api"?"kingshot-api":"kingshot-page",0,error?.message||"Source request failed");\n  await recordScraperRun(kind==="api"?"kingshot-api":"kingshot-page",null,[],false,error);
   return kind==="api"?{data:null,codes:[]}:{html:"",codes:[]};
  }
 
@@ -280,7 +283,7 @@ async function runWithConcurrency(players,fn,limit){
   while(true){
    const i=next++;
    if(i>=players.length)return;
-   try{results[i]=await fn(players[i])}catch(error){results[i]={error:error?.message||"Player processing failed"}}
+   try{results[i]=await fn(players[i])}catch(error){results[i]={error:error?.message||"Player processing failed",errorCategory:classifyError(error)}}
   }
  }
  await Promise.all(Array.from({length:Math.min(limit,players.length)},worker));
