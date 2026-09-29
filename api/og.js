@@ -11,7 +11,7 @@ function pngChunk(type,data){
  buf.writeUInt32BE((crc^0xffffffff)>>>0,8+d.length);
  return buf;
 }
-function makePng(){
+function makePng(route="auto"){
  const pixels=new Uint8Array(W*H*3);
  const set=(x,y,c)=>{if(x<0||y<0||x>=W||y>=H)return;const i=(y*W+x)*3;pixels[i]=c[0];pixels[i+1]=c[1];pixels[i+2]=c[2]};
  const rect=(x,y,w,h,c)=>{for(let yy=Math.max(0,y);yy<Math.min(H,y+h);yy++)for(let xx=Math.max(0,x);xx<Math.min(W,x+w);xx++)set(xx,yy,c)};
@@ -46,12 +46,12 @@ function makePng(){
  "8":["01110","10001","10001","01110","10001","10001","01110"],"9":["01110","10001","10001","01111","00001","00001","01110"]
  };
  const text=(str,x,y,s,c)=>{let cx=x;for(const ch of str){if(ch===" "){cx+=s*4;continue}const g=glyphs[ch]||glyphs["0"];for(let yy=0;yy<7;yy++)for(let xx=0;xx<5;xx++)if(g[yy][xx]==="1")rect(cx+xx*s,y+yy*s,s,s,c);cx+=s*6}};
- text("KINGSHOT",480,190,8,white);text("REDEEMER",480,270,8,light);text("AUTOMATIC GIFT CODE REDEMPTION",480,370,4,muted);
+ const cards={auto:["KINGSHOT","AUTO REDEEMER","AUTOMATIC GIFT CODE REDEMPTION"],redeem:["KINGSHOT","GIFT REDEEMER","MANUAL GIFT CODE REDEMPTION"],discord:["DISCORD","PFP EXTRACTOR","PUBLIC AVATAR LOOKUP & DOWNLOAD"]};\n const card=cards[String(route)]||cards.auto;\n text(card[0],480,190,8,white);text(card[1],480,270,8,light);text(card[2],480,370,4,muted);
  const raw=Buffer.alloc((W*3+1)*H);for(let y=0;y<H;y++){raw[y*(W*3+1)]=0;Buffer.from(pixels.buffer,pixels.byteOffset+y*W*3,W*3).copy(raw,y*(W*3+1)+1)}
  const header=Buffer.alloc(13);header.writeUInt32BE(W,0);header.writeUInt32BE(H,4);header[8]=8;header[9]=2;header[10]=0;header[11]=0;header[12]=0;
  return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),pngChunk("IHDR",header),pngChunk("IDAT",zlib.deflateSync(raw,{level:9})),pngChunk("IEND",[])]);
 }
 export default function handler(req,res){
  res.setHeader("Content-Type","image/png");res.setHeader("Cache-Control","public, max-age=86400, s-maxage=2592000, stale-while-revalidate=604800");
- res.status(200).end(makePng());
+ const route=new URL(req.url,"http://localhost").searchParams.get("route")||"auto";\n res.status(200).end(makePng(route));
 }
