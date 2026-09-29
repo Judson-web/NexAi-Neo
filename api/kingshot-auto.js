@@ -14,6 +14,14 @@ async function rpc(name,body){
  return d;
 }
 
+function isLikelyGiftCode(value){
+ const code=String(value||"").trim();
+ if(!/^[A-Za-z0-9]{6,32}$/.test(code))return false;
+ if(!/[A-Z]/.test(code))return false;
+ if(!/[0-9]/.test(code)&&code!==code.toUpperCase())return false;
+ if(/^u00[0-9a-f]+/i.test(code))return false;
+ return true;
+}
 function normalizeCodes(data){
  const rows=Array.isArray(data?.data?.giftCodes)?data.data.giftCodes:[];
  const now=Date.now(),seen=new Set();
@@ -21,7 +29,7 @@ function normalizeCodes(data){
   const code=String(row?.code||"").trim();
   const expiresAt=row?.expiresAt?Date.parse(row.expiresAt):null;
   const createdAt=row?.createdAt?Date.parse(row.createdAt):null;
-  if(!/^[A-Za-z0-9_-]{1,64}$/.test(code))return null;
+  if(!isLikelyGiftCode(code))return null;
   if(expiresAt&&!Number.isNaN(expiresAt)&&expiresAt<=now)return null;
   if(seen.has(code.toUpperCase()))return null;
   seen.add(code.toUpperCase());
@@ -56,7 +64,7 @@ function extractPageCodes(html){
  const add=(value,expiresAt=null)=>{
   const code=decodeHtml(value).trim();
   const key=code.toUpperCase();
-  if(!/^[A-Za-z0-9_-]{4,64}$/.test(code)||seen.has(key))return;
+  if(!isLikelyGiftCode(code)||seen.has(key))return;
   if(expiresAt&&!Number.isNaN(expiresAt)&&expiresAt<=Date.now())return;
   seen.add(key);
   rows.push({code,expiresAt,createdAt:0,source:"page"});
