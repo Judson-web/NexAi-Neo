@@ -5,6 +5,7 @@ const COOKIE="ks_admin_session";
 function hash(value){return crypto.createHash("sha256").update(String(value)).digest("hex")}
 function getCookie(req){const raw=String(req.headers.cookie||"");const part=raw.split(";").map(x=>x.trim()).find(x=>x.startsWith(COOKIE+"="));return part?decodeURIComponent(part.slice(COOKIE.length+1)):""}
 function getVisitorCookie(req){const raw=String(req.headers.cookie||"");const part=raw.split(";").map(x=>x.trim()).find(x=>x.startsWith("ks_ad_visitor="));return part?decodeURIComponent(part.slice("ks_ad_visitor=".length)):""}
+function getVisitorIdentity(req){const cookie=getVisitorCookie(req);if(cookie)return cookie;const ip=String(req.headers["x-forwarded-for"]||req.headers["x-real-ip"]||"").split(",")[0].trim();const ua=String(req.headers["user-agent"]||"").slice(0,300);return "ip-fallback:"+hash(ip+"|"+ua+"|"+(process.env.KINGSHOT_API_SECRET||"visitor"))}
 async function rpc(name,body){const r=await fetch(SUPABASE_URL+"/rest/v1/rpc/"+name,{method:"POST",headers:{"apikey":SUPABASE_KEY,"authorization":"Bearer "+SUPABASE_KEY,"content-type":"application/json"},body:JSON.stringify(body),signal:AbortSignal.timeout(8000)});const d=await r.json().catch(()=>null);if(!r.ok)throw Error(d?.message||"Admin data service unavailable.");return d}
 export default async function handler(req,res){
  if(!["GET","POST","PATCH","DELETE"].includes(req.method))return res.status(405).json({error:"Method not allowed"});
