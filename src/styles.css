@@ -651,3 +651,27 @@ footer>span:last-child a:hover{color:#fff}
  .ks-hero,.ks-auto-hero{padding-top:32px}
  .ks-hero h1,.ks-auto-hero h1{font-size:43px}
 }
+
+
+/* Desktop product-grade refinement */
+@media(min-width:681px){
+ header,main,footer{width:min(1160px,calc(100% - 64px))}
+ .ks-app .banner-ad,.ks-auto-app .banner-ad{width:min(920px,100%);margin-top:18px}
+ .ks-app .banner-ad-card,.ks-auto-app .banner-ad-card{height:96px;min-height:96px;grid-template-columns:minmax(0,1fr) 230px;border-radius:11px}
+ .ks-app .banner-ad-creative,.ks-auto-app .banner-ad-creative,.ks-app .banner-ad-creative img,.ks-auto-app .banner-ad-creative img{height:96px;min-height:96px;max-height:96px}
+ .ks-app .banner-ad-body,.ks-auto-app .banner-ad-body{padding:13px 17px}
+ .ks-app .banner-ad-headline,.ks-auto-app .banner-ad-headline{font-size:12px}
+ .ks-hero,.ks-auto-hero{padding:66px 0 62px}
+ .ks-hero h1,.ks-auto-hero h1{font-size:clamp(58px,6vw,76px);max-width:850px;margin-left:auto;margin-right:auto}
+ .ks-hero .hero-copy,.ks-auto-hero .hero-copy{max-width:620px;font-size:13px}
+ .ks-form,.ks-register-box{width:min(820px,100%);margin-top:28px}
+ .ks-field,.ks-register-field{background:linear-gradient(180deg,#11131a,#0e1015);border-color:#292d37;box-shadow:0 12px 35px #0004}
+ .ks-field:focus-within,.ks-register-field:focus-within{border-color:#5e4d7c;box-shadow:0 0 0 3px #7258a51a,0 14px 40px #0005}
+ .ks-submit{min-height:52px}
+ .ks-how,.ks-auto-how{padding-bottom:78px}
+ .feature-grid{gap:9px}
+}
+@media(min-width:1100px){
+ .ks-app .banner-ad,.ks-auto-app .banner-ad{width:900px}
+ .ks-hero,.ks-auto-hero{padding-top:72px}
+}
