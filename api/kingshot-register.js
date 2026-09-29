@@ -15,6 +15,6 @@ export default async function handler(req,res){
   const d=await r.json().catch(()=>null);
   if(!r.ok)return res.status(502).json({error:d?.message||d?.hint||"Could not register this player."});
   const result=Array.isArray(d)?d[0]:d;
-  return res.status(200).json({registered:true,alreadyRegistered:Boolean(result?.already_registered),player:result?.player||result});
+  return res.status(200).json({registered:true,alreadyRegistered:Boolean(result?.already_registered),registrationStatus:result?.registration_status||((result?.already_registered)?"ALREADY_REGISTERED":"NEW"),player:result?.player||result});
  }catch(e){return res.status(504).json({error:"Registration service timed out."})}
 }
