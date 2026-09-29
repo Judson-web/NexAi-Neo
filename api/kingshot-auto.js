@@ -39,13 +39,15 @@ function decodeHtml(value){
 }
 
 function cleanPageLines(html){
- return decodeHtml(String(html||"")
+ const text=decodeHtml(String(html||"")
   .replace(/<script[\s\S]*?<\/script>/gi," ")
   .replace(/<style[\s\S]*?<\/style>/gi," ")
   .replace(/<\/(?:p|div|section|article|li|h[1-6]|button|a|br|tr|td|header|footer)>/gi,"\n")
-  .replace(/<[^>]+>/g," ")
+  .replace(/<[^>]+>/g," "));
+ return text
   .split(/\r?\n/)
-  .map(line=>line.replace(/\s+/g," ").trim()).filter(Boolean));
+  .map(line=>line.replace(/\s+/g," ").trim())
+  .filter(Boolean);
 }
 
 function extractPageCodes(html){
