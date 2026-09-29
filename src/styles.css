@@ -777,3 +777,9 @@ footer>span:last-child a:hover{color:#fff}
 .admin-webhook-dot{width:8px;height:8px;border-radius:50%;background:#57f287;box-shadow:0 0 0 4px rgba(87,242,135,.08);flex:0 0 auto}
 .admin-webhook-status .admin-code-add{width:auto;margin:0;white-space:nowrap}
 @media(max-width:640px){.admin-webhook-status{align-items:stretch;flex-direction:column}.admin-webhook-status .admin-code-add{width:100%}}
+
+.ad-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ad-head-actions .ad-ghost{display:inline-flex;align-items:center;gap:7px}
+@media(max-width:640px){.ad-head-actions{width:100%}.ad-head-actions button{flex:1}}
+.ad-form input:invalid:not(:focus):not(:placeholder-shown){border-color:rgba(237,66,69,.65);box-shadow:0 0 0 3px rgba(237,66,69,.06)}
+.ad-form input:valid:not(:placeholder-shown){border-color:rgba(87,242,135,.18)}
