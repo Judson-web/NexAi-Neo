@@ -40,10 +40,10 @@ function decodeHtml(value){
 
 function cleanPageText(html){
  return decodeHtml(String(html||"")
-  .replace(/<script[\\s\\S]*?<\\/script>/gi," ")
-  .replace(/<style[\\s\\S]*?<\\/style>/gi," ")
+  .replace(/<script[\s\S]*?<\/script>/gi," ")
+  .replace(/<style[\s\S]*?<\/style>/gi," ")
   .replace(/<[^>]+>/g," ")
-  .replace(/\\s+/g," ")
+  .replace(/\s+/g," ")
   .trim());
 }
 
@@ -59,13 +59,13 @@ function extractPageCodes(html){
  };
 
  // First handle explicit code attributes/links used by the page UI.
- for(const match of source.matchAll(/(?:data-code|data-gift-code|giftCode|gift_code|["']code["'])\\s*[:=]\\s*["']([A-Za-z0-9_-]{4,64})["']/gi))add(match[1]);
- for(const match of source.matchAll(/\\/gift-codes\\/redeem\\?code=([A-Za-z0-9_-]{4,64})/gi))add(match[1]);
+ for(const match of source.matchAll(/(?:data-code|data-gift-code|giftCode|gift_code|["']code["'])\s*[:=]\s*["']([A-Za-z0-9_-]{4,64})["']/gi))add(match[1]);
+ for(const match of source.matchAll(/\/gift-codes\/redeem\\?code=([A-Za-z0-9_-]{4,64})/gi))add(match[1]);
 
  // The page can be rendered without those attributes. In that case inspect only
  // the server-rendered Active Gift Codes section and ignore its navigation/UI words.
- const start=source.search(/Active\\s+Gift\\s+Codes/i);
- const end=source.search(/Expired\\s+Gift\\s+Codes/i);
+ const start=source.search(/Active\s+Gift\s+Codes/i);
+ const end=source.search(/Expired\s+Gift\s+Codes/i);
  if(start>=0){
   const section=source.slice(start,end>start?end:Math.min(source.length,start+250000));
   const text=cleanPageText(section);
@@ -76,7 +76,7 @@ function extractPageCodes(html){
   ]);
   for(const token of text.match(/[A-Za-z0-9_-]{4,64}/g)||[]){
    const key=token.toUpperCase();
-   if(blocked.has(token.toLowerCase())||/^\\d{1,4}$/.test(token)||/^\\d{1,2}\\/\\d{1,2}\\/\\d{4}$/.test(token))continue;
+   if(blocked.has(token.toLowerCase())||/^\\d{1,4}$/.test(token)||/^\\d{1,2}\/\\d{1,2}\/\\d{4}$/.test(token))continue;
    // Gift codes are normally compact alphanumeric/underscore/dash strings.
    // Require either a digit, mixed case, or an all-uppercase token of 6+ chars.
    if(!/\\d/.test(token)&&token===token.toLowerCase())continue;
