@@ -35,6 +35,26 @@ export default async function handler(req,res){
   const valid=await rpc("kingshot_admin_validate_session",{p_token_hash:tokenHash});if(!valid)return res.status(401).json({error:"Unauthorized"});
   if(req.method==="POST"){
    const body=req.body||{};
+   if(String(body.action||"").toUpperCase()==="REGISTER_DISCORD_COMMANDS"){
+    const botToken=process.env.DISCORD_BOT_TOKEN;
+    if(!botToken)return res.status(503).json({error:"Discord bot token is not configured."});
+    const commands=[
+     {name:"player",description:"Look up a Kingshot player from MightPulse",type:1,options:[
+      {name:"player_id",description:"Kingshot Player ID",type:3,required:true},
+      {name:"private",description:"Send the player details privately",type:5,required:false}
+     ]},
+     {name:"register",description:"Enable Kingshot auto-redeem for a Player ID",type:1,options:[
+      {name:"player_id",description:"Kingshot Player ID",type:3,required:true}
+     ]}
+    ];
+    const me=await fetch("https://discord.com/api/v10/users/@me",{headers:{Authorization:"Bot "+botToken},signal:AbortSignal.timeout(8000)});
+    const meData=await me.json().catch(()=>({}));
+    if(!me.ok||!meData?.id)return res.status(502).json({error:"Discord bot authentication failed."});
+    const cr=await fetch("https://discord.com/api/v10/applications/"+meData.id+"/commands",{method:"PUT",headers:{Authorization:"Bot "+botToken,"Content-Type":"application/json"},body:JSON.stringify(commands),signal:AbortSignal.timeout(10000)});
+    const cd=await cr.json().catch(()=>({}));
+    if(!cr.ok)return res.status(502).json({error:cd?.message||"Discord rejected command registration."});
+    return res.status(200).json({ok:true,commands:cd.map(x=>x.name)});
+   }
    if(String(body.action||"").toUpperCase()==="TEST_WEBHOOK"){
     const webhook=process.env.DISCORD_KINGSHOT_WEBHOOK_URL||process.env.DISCORD_SCRAPER_WEBHOOK_URL;
     if(!webhook)return res.status(503).json({error:"Discord webhook is not configured."});
