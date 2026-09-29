@@ -44,7 +44,6 @@ export default async function handler(req,res){
     if(!wr.ok)return res.status(502).json({error:"Discord rejected the webhook request ("+wr.status+")."});
     return res.status(200).json({ok:true});
    }
-   const body=req.body||{};
    if(String(body.adAction||"")==="upsert"){
     const id=body.id&&/^[0-9a-f-]{36}$/.test(String(body.id))?String(body.id):null;
     const ad=await rpc("kingshot_admin_upsert_banner_ad",{p_token_hash:tokenHash,p_id:id,p_name:String(body.name||""),p_advertiser:String(body.advertiser||""),p_site:String(body.site||"all"),p_placement:String(body.placement||"top"),p_image_url:body.image_url?String(body.image_url):null,p_click_url:String(body.click_url||""),p_alt_text:String(body.alt_text||"Advertisement"),p_headline:String(body.headline||""),p_cta_label:String(body.cta_label||"Learn more"),p_background:String(body.background||"#11131a"),p_active:body.active!==false,p_starts_at:body.starts_at||null,p_ends_at:body.ends_at||null});
