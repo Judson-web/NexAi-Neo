@@ -38,55 +38,52 @@ function decodeHtml(value){
   .replace(/&gt;/gi,">");
 }
 
-function cleanPageText(html){
+function cleanPageLines(html){
  return decodeHtml(String(html||"")
-  .replace(/<script[\s\S]*?<\/script>/gi," ")
-  .replace(/<style[\s\S]*?<\/style>/gi," ")
+  .replace(/<script[\\s\\S]*?<\\/script>/gi," ")
+  .replace(/<style[\\s\\S]*?<\\/style>/gi," ")
+  .replace(/<\\/(?:p|div|section|article|li|h[1-6]|button|a|br|tr|td|header|footer)>/gi,"\\n")
   .replace(/<[^>]+>/g," ")
-  .replace(/\s+/g," ")
-  .trim());
+  .split(/\\r?\\n/)
+  .map(line=>line.replace(/\\s+/g," ").trim())
+  .filter(Boolean);
 }
 
 function extractPageCodes(html){
  const source=String(html||"");
  const seen=new Set(),rows=[];
- const add=(value)=>{
+ const add=(value,expiresAt=null)=>{
   const code=decodeHtml(value).trim();
   const key=code.toUpperCase();
   if(!/^[A-Za-z0-9_-]{4,64}$/.test(code)||seen.has(key))return;
+  if(expiresAt&&!Number.isNaN(expiresAt)&&expiresAt<=Date.now())return;
   seen.add(key);
-  rows.push({code,expiresAt:null,createdAt:0,source:"page"});
+  rows.push({code,expiresAt,createdAt:0,source:"page"});
  };
 
- // First handle explicit code attributes/links used by the page UI.
- for(const match of source.matchAll(/(?:data-code|data-gift-code|giftCode|gift_code|["']code["'])\s*[:=]\s*["']([A-Za-z0-9_-]{4,64})["']/gi))add(match[1]);
- for(const match of source.matchAll(/\/gift-codes\/redeem\?code=([A-Za-z0-9_-]{4,64})/gi))add(match[1]);
+ // Handle explicit code attributes/links if the page exposes them.
+ for(const match of source.matchAll(/(?:data-code|data-gift-code|giftCode|gift_code|["']code["'])\\s*[:=]\\s*["']([A-Za-z0-9_-]{4,64})["']/gi))add(match[1]);
+ for(const match of source.matchAll(/\\/gift-codes\\/redeem\\?code=([A-Za-z0-9_-]{4,64})/gi))add(match[1]);
 
- // The page can be rendered without those attributes. In that case inspect only
- // the server-rendered Active Gift Codes section and ignore its navigation/UI words.
- const start=source.search(/Active\s+Gift\s+Codes/i);
- const end=source.search(/Expired\s+Gift\s+Codes/i);
+ // Otherwise parse only the visible Active Gift Codes card sequence.
+ // Each active card is rendered as: Active -> CODE -> optional Expires: DATE.
+ const lines=cleanPageLines(source);
+ const start=lines.findIndex(line=>/^Active Gift Codes$/i.test(line));
+ const end=lines.findIndex((line,index)=>index>start&&/^Expired Gift Codes$/i.test(line));
  if(start>=0){
-  const section=source.slice(start,end>start?end:Math.min(source.length,start+250000));
-  const text=cleanPageText(section);
-  const blocked=new Set([
-   "active","gift","codes","code","copy","sign","in","to","redeem","share","link",
-   "expires","not","specified","yet","view","image","rewards","discover","and",
-   "exclusive","for","kingshot","players","total","expired"
-  ]);
-  for(const token of text.match(/[A-Za-z0-9_-]{4,64}/g)||[]){
-   const key=token.toUpperCase();
-   if(blocked.has(token.toLowerCase())||/^\d{1,4}$/.test(token)||/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(token))continue;
-   // Gift codes are normally compact alphanumeric/underscore/dash strings.
-   // Require either a digit, mixed case, or an all-uppercase token of 6+ chars.
-   if(!/\d/.test(token)&&token===token.toLowerCase())continue;
-   if(!/\d/.test(token)&&token.length<6)continue;
-   add(token);
+  const stop=end>start?end:lines.length;
+  for(let i=start+1;i<stop;i++){
+   if(!/^Active$/i.test(lines[i]))continue;
+   const codeLine=lines[i+1];
+   if(!codeLine)continue;
+   const expiryLine=lines[i+2]||"";
+   const expiryMatch=expiryLine.match(/^Expires:\\s*(\\d{1,2}\\/\\d{1,2}\\/\\d{4})$/i);
+   const expiresAt=expiryMatch?Date.parse(expiryMatch[1]+" 23:59:59 UTC"):null;
+   add(codeLine,expiresAt);
   }
  }
  return rows;
 }
-
 function mergeCodes(apiCodes,pageCodes){
  const map=new Map();
  for(const row of [...apiCodes,...pageCodes]){
