@@ -4,6 +4,7 @@ const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4
 const COOKIE="ks_admin_session";
 function hash(value){return crypto.createHash("sha256").update(String(value)).digest("hex")}
 function getCookie(req){const raw=String(req.headers.cookie||"");const part=raw.split(";").map(x=>x.trim()).find(x=>x.startsWith(COOKIE+"="));return part?decodeURIComponent(part.slice(COOKIE.length+1)):""}
+function getVisitorCookie(req){const raw=String(req.headers.cookie||"");const part=raw.split(";").map(x=>x.trim()).find(x=>x.startsWith("ks_ad_visitor="));return part?decodeURIComponent(part.slice("ks_ad_visitor=".length)):""}
 async function rpc(name,body){const r=await fetch(SUPABASE_URL+"/rest/v1/rpc/"+name,{method:"POST",headers:{"apikey":SUPABASE_KEY,"authorization":"Bearer "+SUPABASE_KEY,"content-type":"application/json"},body:JSON.stringify(body),signal:AbortSignal.timeout(8000)});const d=await r.json().catch(()=>null);if(!r.ok)throw Error(d?.message||"Admin data service unavailable.");return d}
 export default async function handler(req,res){
  if(!["GET","POST","PATCH","DELETE"].includes(req.method))return res.status(405).json({error:"Method not allowed"});
@@ -13,12 +14,17 @@ export default async function handler(req,res){
    const site=String(req.query?.site||"all"),placement=String(req.query?.placement||"top");
    const row=await rpc("kingshot_public_banner_ad",{p_site:site,p_placement:placement});
    const ad=Array.isArray(row)?row[0]:row;
+   let visitor=getVisitorCookie(req);
+   if(!visitor){visitor=crypto.randomUUID();res.setHeader("Set-Cookie",`ks_ad_visitor=${encodeURIComponent(visitor)}; Path=/; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax`)}
+   res.setHeader("Cache-Control","private, no-store");
    return res.status(200).json({ad:ad||null});
   }
   if(req.method==="GET"&&publicMode==="click"){
    const id=String(req.query?.id||"");
    if(!/^[0-9a-f-]{36}$/.test(id))return res.status(400).json({error:"Invalid advertisement."});
-   const url=await rpc("kingshot_public_banner_click",{p_id:id});
+   let visitor=getVisitorCookie(req);if(!visitor){visitor=crypto.randomUUID();res.setHeader("Set-Cookie",`ks_ad_visitor=${encodeURIComponent(visitor)}; Path=/; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax`)}
+   const visitorHash=hash(visitor);
+   const url=await rpc("kingshot_public_banner_click",{p_id:id,p_visitor_hash:visitorHash});
    res.setHeader("Cache-Control","no-store");
    res.setHeader("Location",String(url));
    return res.status(302).end();
