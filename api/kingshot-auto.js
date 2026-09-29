@@ -113,6 +113,13 @@ const HANDLED_STATUSES=new Set(["SUCCESS","RECEIVED","SAME TYPE EXCHANGE","TIME_
 const PLAYER_CONCURRENCY=8;
 const KINGDOM_RESET_HOUR=5;
 const KINGDOM_RESET_MINUTE=30;
+const DISCORD_WEBHOOK_URL=process.env.DISCORD_KINGSHOT_WEBHOOK_URL||process.env.DISCORD_SCRAPER_WEBHOOK_URL;
+async function sendDiscordEvent({title,description,fields=[],color=0x5865F2}){
+ if(!DISCORD_WEBHOOK_URL)return;
+ try{
+  await fetch(DISCORD_WEBHOOK_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({username:"Kingshot Auto Redeem",embeds:[{title,description:description||undefined,color,fields:fields.slice(0,25).map(f=>({name:String(f.name).slice(0,256),value:String(f.value).slice(0,1024),inline:Boolean(f.inline)})),timestamp:new Date().toISOString(),footer:{text:"Kingshot Redeemer"}}]}),signal:AbortSignal.timeout(5000)});
+ }catch(error){console.error("Discord webhook failed:",error?.message||error)}
+}
 
 function getKingshotResetBoundary(now=Date.now()){
  const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(now));
@@ -158,6 +165,7 @@ async function ensureCurrentKingdom(player){
  const fresh=await fetchCurrentKingshotPlayer(player.player_id);
  if(fresh.notFound){
   await rpc("mark_kingshot_player_stale",{p_player_id:player.player_id,p_reason:"MIGHTPULSE_PLAYER_NOT_FOUND"});
+  await sendDiscordEvent({title:"⚠️ Player marked stale",description:"MightPulse could not find this registered Kingshot player.",fields:[{name:"Player ID",value:String(player.player_id),inline:true},{name:"Last kingdom",value:String(player.kingdom_id||"Unknown"),inline:true}],color:0xFEE75C});
   return {stale:true};
  }
 
@@ -172,11 +180,10 @@ async function ensureCurrentKingdom(player){
   p_avatar_url:p.avatar_url||p.avatar||p.avatarUrl||null
  });
  const updated=result?.player||player;
- if(result?.kingdom_changed)console.log("Kingshot kingdom changed:",{
-  playerId:player.player_id,
-  from:result.old_kingdom_id,
-  to:result.new_kingdom_id
- });
+ if(result?.kingdom_changed){
+  console.log("Kingshot kingdom changed:",{playerId:player.player_id,from:result.old_kingdom_id,to:result.new_kingdom_id});
+  await sendDiscordEvent({title:"🔄 Kingdom changed",description:"A registered player's current Kingshot kingdom changed.",fields:[{name:"Player ID",value:String(player.player_id),inline:true},{name:"Previous",value:String(result.old_kingdom_id||"Unknown"),inline:true},{name:"Current",value:String(result.new_kingdom_id||currentKingdom),inline:true}],color:0x5865F2});
+ }
  return {player:updated,revalidated:true,kingdomChanged:Boolean(result?.kingdom_changed)};
 }
 
@@ -184,13 +191,8 @@ async function updateScraperHealth(source,codeCount,error=null){
  try{
   const result=await rpc("record_kingshot_scraper_health",{p_source:source,p_code_count:codeCount,p_error:error});
   const health=Array.isArray(result)?result[0]:result;
-  const webhook=process.env.DISCORD_SCRAPER_WEBHOOK_URL;
-  if(webhook&&(health?.alert||health?.recovered)){
-   const prefix=health.alert?"🚨 Kingshot scraper alert":"✅ Kingshot scraper recovered";
-   const detail=health.alert
-    ? source+" returned no usable gift codes for 3 consecutive runs."
-    : source+" is returning gift codes again.";
-   await fetch(webhook,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({content:prefix+" — "+detail+" Count: "+String(codeCount)+"."}),signal:AbortSignal.timeout(5000)}).catch(()=>{});
+  if(health?.alert||health?.recovered){
+   await sendDiscordEvent({title:(health.alert?"🚨":"✅")+" Kingshot scraper "+(health.alert?"alert":"recovered"),description:health.alert?source+" returned no usable gift codes for 3 consecutive runs.":source+" is returning gift codes again.",fields:[{name:"Source",value:source,inline:true},{name:"Code count",value:String(codeCount),inline:true}],color:health.alert?0xED4245:0x57F287});
   }
  }catch(error){console.error("Scraper health update failed:",source,error?.message||error)}
 }
@@ -238,8 +240,10 @@ async function redeemForPlayer(player,codes){
 
  const d=await redeemKingshot({playerId:player.player_id,code:item.code,kid:player.kingdom_id});
  const status=String(d?.status||"ERROR").toUpperCase();
- await rpc("record_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code,p_status:status,p_err_code:d?.errCode??null,p_message:d?.message||d?.error||null});
- return {attempted:1,success:status==="SUCCESS"?1:0,alreadyHandled:0,skipped:0};
+ const message=d?.message||d?.error||"";
+ await rpc("record_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code,p_status:status,p_err_code:d?.errCode??null,p_message:message});
+ await sendDiscordEvent({title:(status==="SUCCESS"||status==="RECEIVED"||status==="SAME TYPE EXCHANGE"?"✅":"⚠️")+" Redemption "+status,description:message||"Kingshot redemption request completed.",fields:[{name:"Player ID",value:String(player.player_id),inline:true},{name:"Kingdom",value:String(player.kingdom_id||"Unknown"),inline:true},{name:"Gift code",value:String(item.code),inline:true}],color:(status==="SUCCESS"||status==="RECEIVED"||status==="SAME TYPE EXCHANGE")?0x57F287:0xFEE75C});
+ return {attempted:1,success:status==="SUCCESS"?1:0,alreadyHandled:0,skipped:0,redemptionStatus:status};
 }
 
 async function runWithConcurrency(players,fn,limit){
@@ -285,6 +289,9 @@ export default async function handler(req,res){
   const codes=mergeCodes(apiCodes,[...pageCodes,...VERIFIED_FALLBACK_CODES,...adminCodes]);
   if(!codes.length)throw Error("Kingshot gift-code sources returned no active codes.");
   console.log("Kingshot auto feed:",{apiActive:data?.data?.activeCount??null,apiCodes:apiCodes.map(x=>x.code),pageCodes:pageCodes.map(x=>x.code),adminCodes:adminCodes.map(x=>x.code),merged:codes.map(x=>x.code)});
+  const knownCodes=new Set((Array.isArray(adminRows)?adminRows:[]).map(row=>String(row?.code||"").toUpperCase()));
+  const newCodes=codes.filter(item=>!knownCodes.has(String(item.code).toUpperCase()));
+  for(const item of newCodes)await sendDiscordEvent({title:"🎁 New Kingshot gift code",description:"A new active gift code was discovered by the scraper.",fields:[{name:"Gift code",value:String(item.code),inline:true},{name:"Source",value:String(item.source||"merged"),inline:true},{name:"Expires",value:item.expiresAt&&!Number.isNaN(item.expiresAt)?new Date(item.expiresAt).toISOString():"Not specified",inline:true}]});
   await Promise.all(codes.map(item=>rpc("upsert_kingshot_gift_code",{
    p_code:item.code,
    p_source_date:item.createdAt&&!Number.isNaN(item.createdAt)?new Date(item.createdAt).toISOString().slice(0,10):null
@@ -295,11 +302,13 @@ export default async function handler(req,res){
   const results=await runWithConcurrency(list,p=>redeemForPlayer(p,codes),PLAYER_CONCURRENCY);
   console.log("Kingshot auto results:",results);
   const totals=results.reduce((a,r)=>{
-   a.attempted+=(r?.attempted||0);a.success+=(r?.success||0);a.alreadyHandled+=(r?.alreadyHandled||0);a.skipped+=(r?.skipped||0);a.errors+=r?.error?1:0;return a;
-  },{attempted:0,success:0,alreadyHandled:0,skipped:0,errors:0});
+   a.attempted+=(r?.attempted||0);a.success+=(r?.success||0);a.alreadyHandled+=(r?.alreadyHandled||0);a.skipped+=(r?.skipped||0);a.errors+=r?.error?1:0;a.stale+=r?.stale?1:0;return a;
+  },{attempted:0,success:0,alreadyHandled:0,skipped:0,errors:0,stale:0});
+  if(totals.attempted||totals.errors||totals.stale||newCodes.length)await sendDiscordEvent({title:"📊 Auto-redeem cycle",description:"Scheduled Kingshot worker completed a cycle with activity.",fields:[{name:"Players",value:String(list.length),inline:true},{name:"Codes",value:String(codes.length),inline:true},{name:"Attempts",value:String(totals.attempted),inline:true},{name:"Successes",value:String(totals.success),inline:true},{name:"Errors",value:String(totals.errors),inline:true},{name:"Stale",value:String(totals.stale),inline:true}],color:totals.errors||totals.stale?0xFEE75C:0x57F287});
   return res.status(200).json({ok:true,source:"kingshot.net",codes:codes.length,players:list.length,...totals});
  }catch(e){
   console.error("Kingshot auto redeem:",e);
+  await sendDiscordEvent({title:"❌ Auto-redeem worker error",description:e?.message||"Auto redemption failed.",color:0xED4245});
   return res.status(502).json({error:e.message||"Auto redemption failed."});
  }
 }
