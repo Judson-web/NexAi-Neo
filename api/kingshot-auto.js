@@ -45,7 +45,7 @@ function cleanPageLines(html){
   .replace(/<\/(?:p|div|section|article|li|h[1-6]|button|a|br|tr|td|header|footer)>/gi,"\n")
   .replace(/<[^>]+>/g," ")
   .split(/\r?\n/)
-  .map(line=>line.replace(/\s+/g," ").trim())
+  .map(line=>line.replace(/\s+/g," ").trim()))
   .filter(Boolean);
 }
 
