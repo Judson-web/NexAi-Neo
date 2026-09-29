@@ -1,3 +1,4 @@
+import {redeemKingshot} from"../lib/kingshot-redeem.js";
 import crypto from"node:crypto";
 const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
 const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4TYTujQh8w5NyAJA_3H2K5CEg";
