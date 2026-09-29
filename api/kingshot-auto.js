@@ -111,7 +111,27 @@ function mergeCodes(apiCodes,pageCodes){
 
 const HANDLED_STATUSES=new Set(["SUCCESS","RECEIVED","SAME TYPE EXCHANGE","TIME_ERROR","CDK_NOT_FOUND","USAGE_LIMIT"]);
 const PLAYER_CONCURRENCY=8;
-const KINGDOM_REVALIDATION_MS=24*60*60*1000;
+const KINGDOM_RESET_HOUR=5;
+const KINGDOM_RESET_MINUTE=30;
+
+function getKingshotResetBoundary(now=Date.now()){
+ const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(now));
+ const values=Object.fromEntries(parts.map(part=>[part.type,part.value]));
+ const year=Number(values.year),month=Number(values.month),day=Number(values.day),hour=Number(values.hour),minute=Number(values.minute);
+ const afterReset=hour>KINGDOM_RESET_HOUR||(hour===KINGDOM_RESET_HOUR&&minute>=KINGDOM_RESET_MINUTE);
+ const dateKey=year+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+ return {dateKey,afterReset};
+}
+
+function needsKingdomResetCheck(lastCheckedAt,now=Date.now()){
+ if(!lastCheckedAt)return true;
+ const last=Date.parse(lastCheckedAt);
+ if(Number.isNaN(last))return true;
+ const current=getKingshotResetBoundary(now);
+ const previous=getKingshotResetBoundary(last);
+ if(current.dateKey!==previous.dateKey)return current.afterReset;
+ return current.afterReset&&!previous.afterReset;
+}
 
 async function fetchCurrentKingshotPlayer(playerId){
  const key=process.env.MIGHTPULSE_API_KEY||process.env.KSS_API_KEY;
@@ -128,7 +148,7 @@ async function fetchCurrentKingshotPlayer(playerId){
 
 async function ensureCurrentKingdom(player){
  const checkedAt=player.last_kingdom_check_at?Date.parse(player.last_kingdom_check_at):0;
- if(checkedAt&&Date.now()-checkedAt<KINGDOM_REVALIDATION_MS)return {player,revalidated:false};
+ if(!needsKingdomResetCheck(player.last_kingdom_check_at))return {player,revalidated:false};
 
  const fresh=await fetchCurrentKingshotPlayer(player.player_id);
  if(fresh.notFound){
