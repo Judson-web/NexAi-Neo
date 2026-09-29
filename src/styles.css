@@ -562,3 +562,22 @@ footer>span:last-child a:hover{color:#fff}
  .ad-form-actions{grid-template-columns:1fr 1.8fr}
  .ad-form-actions .ad-ghost{min-width:0}
 }
+
+
+.ad-form-section{padding:12px;gap:9px}
+.ad-form-section-head{padding-bottom:8px}
+.ad-form-section-head small{display:none}
+.ad-form-section-head b{font-size:9px}
+.ad-form-section-head>span{width:22px;height:22px}
+.ad-field-help,.ad-color-preview{display:none}
+.ad-advanced{border:1px solid #20232d;border-radius:9px;background:#0b0d12;padding:0 11px;color:#727987}
+.ad-advanced summary{padding:10px 0;cursor:pointer;list-style:none;font-size:7px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#858d9a}
+.ad-advanced summary::-webkit-details-marker{display:none}
+.ad-advanced summary:after{content:"+";float:right;font-size:12px;font-weight:400}
+.ad-advanced[open] summary:after{content:"−"}
+.ad-advanced-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:2px 0 9px}
+.ad-advanced>small{display:block;padding:0 0 10px;color:#535b68;font-size:6.5px;line-height:1.4}
+.ad-rotation-note{max-width:280px;display:flex;align-items:center;gap:6px;color:#5d6572;font-size:6.5px;line-height:1.4;text-align:right}
+.ad-rotation-note svg{flex:none;color:#77708c}
+@media(max-width:700px){.ad-rotation-note{max-width:210px}.ad-advanced-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.ad-editor-head{align-items:flex-start}.ad-rotation-note{display:none}.ad-form-section{padding:10px}.ad-form-two{grid-template-columns:1fr}}
