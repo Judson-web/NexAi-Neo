@@ -18,9 +18,17 @@ function KsLogo(){return <a className="brand ks-brand" href="/"><span className=
 function GitHubChip(){return <a className="admin-credit site-github-credit" href="https://discord.com/channels/@me/871756466900598815" target="_blank" rel="noreferrer" aria-label="Message Judson on Discord"><img src="https://github.com/Judson-web.png?size=96" alt="Judson"/><span>Judson</span></a>}
 
 function BannerAd({site="all",placement="top"}){const [ad,setAd]=useState(null);const [hidden,setHidden]=useState(false);
- useEffect(()=>{let live=true;fetch("/api/banner-ads?site="+encodeURIComponent(site)+"&placement="+encodeURIComponent(placement),{credentials:"omit"}).then(r=>r.ok?r.json():null).then(d=>{if(live&&d?.ad)setAd(d.ad)}).catch(()=>{});return()=>{live=false}},[site,placement]);
+ useEffect(()=>{let live=true;fetch("/api/banner-ads?site="+encodeURIComponent(site)+"&placement="+encodeURIComponent(placement),{credentials:"omit",cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{if(live&&d?.ad)setAd(d.ad)}).catch(()=>{});return()=>{live=false}},[site,placement]);
  if(!ad||hidden)return null;
- return <aside className={"banner-ad banner-ad-"+placement} aria-label="Advertisement"><div className="banner-ad-label"><Megaphone size={10}/>ADVERTISEMENT</div><a className="banner-ad-card" href={"/api/banner-ad-click?id="+encodeURIComponent(ad.id)} target="_blank" rel="sponsored noopener" style={{"--ad-bg":ad.background||"#11131a"}}><div className="banner-ad-creative">{ad.image_url?<img src={ad.image_url} alt={ad.alt_text||"Advertisement"}/>:<div className="banner-ad-copy"><span>{ad.advertiser||"Sponsored"}</span><b>{ad.headline||ad.alt_text||"Featured promotion"}</b><small>{ad.cta_label||"Learn more"}</small></div>}</div>{ad.image_url&&<div className="banner-ad-text"><span>{ad.advertiser||"Sponsored"}</span><b>{ad.headline||"Featured promotion"}</b><small>{ad.cta_label||"Learn more"} <ExternalLink size={11}/></small></div>}<button type="button" className="banner-ad-close" onClick={e=>{e.preventDefault();e.stopPropagation();setHidden(true)}} aria-label="Hide advertisement">×</button></a></aside>}
+ const advertiser=ad.advertiser||"Sponsored";const headline=ad.headline||ad.alt_text||"Featured promotion";const cta=ad.cta_label||"Learn more";
+ return <aside className={"banner-ad banner-ad-"+placement} aria-label="Advertisement">
+  <div className="banner-ad-label"><span className="banner-ad-label-dot"/><Megaphone size={10}/><span>ADVERTISEMENT</span><span className="banner-ad-sponsored">Sponsored</span></div>
+  <a className="banner-ad-card" href={"/api/banner-ad-click?id="+encodeURIComponent(ad.id)} target="_blank" rel="sponsored noopener" style={{"--ad-bg":ad.background||"#11131a"}}>
+   <div className={"banner-ad-creative "+(!ad.image_url?"banner-ad-no-image":"")}>{ad.image_url?<img src={ad.image_url} alt={ad.alt_text||"Advertisement"}/>:<div className="banner-ad-copy"><span>{advertiser}</span><b>{headline}</b></div>}</div>
+   <div className="banner-ad-body"><div className="banner-ad-meta"><span>{advertiser}</span><span className="banner-ad-dot">•</span><span>Sponsored</span></div><b className="banner-ad-headline">{headline}</b><span className="banner-ad-cta">{cta}<ExternalLink size={11}/></span></div>
+   <button type="button" className="banner-ad-close" onClick={e=>{e.preventDefault();e.stopPropagation();setHidden(true)}} aria-label="Hide advertisement">×</button>
+  </a>
+ </aside>}
  
 function App(){
  const initial=getInitialId();
