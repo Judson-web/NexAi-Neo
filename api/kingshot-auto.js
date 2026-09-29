@@ -116,9 +116,36 @@ const KINGDOM_RESET_MINUTE=30;
 const DISCORD_WEBHOOK_URL=process.env.DISCORD_KINGSHOT_WEBHOOK_URL||process.env.DISCORD_SCRAPER_WEBHOOK_URL;
 async function sendDiscordEvent({title,description,fields=[],color=0x5865F2}){
  if(!DISCORD_WEBHOOK_URL)return;
- try{
-  await fetch(DISCORD_WEBHOOK_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({username:"Kingshot Auto Redeem",embeds:[{title,description:description||undefined,color,fields:fields.slice(0,25).map(f=>({name:String(f.name).slice(0,256),value:String(f.value).slice(0,1024),inline:Boolean(f.inline)})),timestamp:new Date().toISOString(),footer:{text:"Kingshot Redeemer"}}]}),signal:AbortSignal.timeout(5000)});
- }catch(error){console.error("Discord webhook failed:",error?.message||error)}
+ const payload={username:"Kingshot Auto Redeem",allowed_mentions:{parse:[]},embeds:[{
+  title:String(title||"Kingshot Auto Redeem").slice(0,256),
+  description:description?String(description).slice(0,4096):undefined,
+  color,
+  fields:fields.slice(0,25).map(f=>({name:String(f.name||"Info").slice(0,256),value:String(f.value??"—").slice(0,1024),inline:Boolean(f.inline)})),
+  timestamp:new Date().toISOString(),
+  footer:{text:"Kingshot Redeemer"}
+ }]};
+ for(let attempt=0;attempt<3;attempt++){
+  try{
+   const response=await fetch(DISCORD_WEBHOOK_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload),signal:AbortSignal.timeout(8000)});
+   if(response.ok)return true;
+   const retryAfter=Number(response.headers.get("retry-after")||"0");
+   if((response.status===429||response.status>=500)&&attempt<2){
+    const wait=Math.min(3000,Math.max(500,Number.isFinite(retryAfter)&&retryAfter>0?retryAfter*1000:750*(attempt+1)));
+    await new Promise(resolve=>setTimeout(resolve,wait));
+    continue;
+   }
+   console.error("Discord webhook rejected:",response.status,await response.text().catch(()=>""));
+   return false;
+  }catch(error){
+   if(attempt<2){
+    await new Promise(resolve=>setTimeout(resolve,750*(attempt+1)));
+    continue;
+   }
+   console.error("Discord webhook failed:",error?.message||error);
+   return false;
+  }
+ }
+ return false;
 }
 
 function getKingshotResetBoundary(now=Date.now()){
