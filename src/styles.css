@@ -492,3 +492,49 @@ footer>span:last-child a:hover{color:#fff}
 }
 
 .ad-row-actions .ad-action-delete{color:#e58b98;border-color:#5a2932;background:#180e11}.ad-row-actions .ad-action-toggle{color:#d6c8ed}.ad-row-actions .ad-action-edit{color:#b9c0cc}.ad-status{display:inline-block!important;width:max-content;padding:3px 5px;border-radius:5px;font-size:6px!important;letter-spacing:.08em;font-weight:900;margin-top:5px!important}.ad-status.live{color:#8ed6a4!important;background:#122319}.ad-status.scheduled{color:#d8c487!important;background:#282315}.ad-status.off{color:#a0a6b0!important;background:#1b1d22}.ad-status.expired{color:#d98d98!important;background:#261316}
+
+
+/* Professional publisher-style ad creative */
+.banner-ad{max-width:1000px;margin:18px auto 0}
+.banner-ad-label{height:16px;margin:0 2px 7px;display:flex;align-items:center;gap:5px;color:#68707d;font-size:6.5px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+.banner-ad-label-dot{width:4px;height:4px;border-radius:50%;background:#7c8492;opacity:.8}
+.banner-ad-sponsored{margin-left:3px;padding-left:7px;border-left:1px solid #292d35;color:#505762;font-weight:700;letter-spacing:.08em}
+.banner-ad-card{min-height:104px;display:grid;grid-template-columns:minmax(0,1fr) 250px;position:relative;overflow:hidden;border:1px solid #2a2e38;border-radius:9px;background:var(--ad-bg,#11131a);box-shadow:0 8px 28px #0006;text-decoration:none;transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}
+.banner-ad-card:hover{transform:translateY(-1px);border-color:#444a58;box-shadow:0 12px 34px #0008}
+.banner-ad-creative{min-width:0;min-height:104px;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--ad-bg,#11131a)}
+.banner-ad-creative img{display:block;width:100%;height:100%;min-height:104px;max-height:170px;object-fit:cover}
+.banner-ad-creative:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 65%,#0004 100%);pointer-events:none}
+.banner-ad-no-image{background:linear-gradient(115deg,var(--ad-bg,#11131a),#181b23)}
+.banner-ad-copy{width:100%;padding:22px 28px;display:flex;flex-direction:column;gap:6px;position:relative;z-index:1}
+.banner-ad-copy span,.banner-ad-meta{font-size:7px;text-transform:uppercase;letter-spacing:.13em;color:#8d95a3;font-weight:800}
+.banner-ad-copy b{max-width:620px;color:#f1f3f7;font-size:18px;line-height:1.15;letter-spacing:-.025em}
+.banner-ad-body{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:7px;padding:16px 19px;background:#0c0e13;border-left:1px solid #ffffff10}
+.banner-ad-meta{display:flex;align-items:center;gap:6px;color:#737b88;font-size:6.5px}
+.banner-ad-dot{opacity:.45}
+.banner-ad-headline{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#e9ecf1;font-size:13px;line-height:1.28;letter-spacing:-.01em}
+.banner-ad-cta{width:max-content;display:inline-flex;align-items:center;gap:5px;margin-top:2px;padding:7px 10px;border:1px solid #373c49;border-radius:6px;color:#c9c1e5;background:#15131d;font-size:7px;font-weight:900;letter-spacing:.02em;transition:background .16s ease,border-color .16s ease;color:#d8d1ed}
+.banner-ad-card:hover .banner-ad-cta{background:#1c1927;border-color:#514666}
+.banner-ad-close{position:absolute;right:7px;top:7px;z-index:3;width:20px;height:20px;padding:0;border:1px solid #ffffff22;border-radius:50%;background:#08090bbd;color:#b1b6c0;font-size:14px;line-height:17px;cursor:pointer;opacity:.75}
+.banner-ad-close:hover{opacity:1;background:#11141a;color:#fff}
+.ad-preview-shell .banner-ad-card{grid-template-columns:minmax(0,1fr) 180px}
+.ad-preview-shell .banner-ad-body{padding:12px}
+.ad-preview-shell .banner-ad-headline{font-size:10px}
+@media(max-width:620px){
+ .banner-ad{margin-top:12px}
+ .banner-ad-card{min-height:82px;grid-template-columns:minmax(0,1fr) 150px}
+ .banner-ad-creative{min-height:82px}
+ .banner-ad-creative img{min-height:82px;max-height:110px}
+ .banner-ad-body{padding:11px 12px;gap:5px}
+ .banner-ad-headline{font-size:10px}
+ .banner-ad-cta{padding:6px 8px;font-size:6.5px}
+ .banner-ad-copy{padding:14px 16px}
+ .banner-ad-copy b{font-size:13px}
+}
+@media(max-width:430px){
+ .banner-ad-card{grid-template-columns:minmax(0,1fr) 122px}
+ .banner-ad-body{padding:9px}
+ .banner-ad-meta{font-size:5.5px}
+ .banner-ad-headline{font-size:9px}
+ .banner-ad-cta{font-size:6px;padding:5px 7px}
+ .banner-ad-copy b{font-size:11px}
+}
