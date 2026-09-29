@@ -18,7 +18,7 @@ function KsLogo(){return <a className="brand ks-brand" href="/"><span className=
 function GitHubChip(){return <a className="admin-credit site-github-credit" href="https://discord.com/channels/@me/871756466900598815" target="_blank" rel="noreferrer" aria-label="Message Judson on Discord"><img src="https://github.com/Judson-web.png?size=96" alt="Judson"/><span>Judson</span></a>}
 
 function BannerAd({site="all",placement="top"}){const [ad,setAd]=useState(null);const [hidden,setHidden]=useState(false);
- useEffect(()=>{let live=true;fetch("/api/banner-ads?site="+encodeURIComponent(site)+"&placement="+encodeURIComponent(placement),{credentials:"omit",cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{if(live&&d?.ad)setAd(d.ad)}).catch(()=>{});return()=>{live=false}},[site,placement]);
+ useEffect(()=>{let live=true;fetch("/api/banner-ads?site="+encodeURIComponent(site)+"&placement="+encodeURIComponent(placement),{credentials:"same-origin",cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{if(live&&d?.ad)setAd(d.ad)}).catch(()=>{});return()=>{live=false}},[site,placement]);
  if(!ad||hidden)return null;
  const advertiser=ad.advertiser||"Sponsored";const headline=ad.headline||ad.alt_text||"Featured promotion";const cta=ad.cta_label||"Learn more";
  return <aside className={"banner-ad banner-ad-"+placement} aria-label="Advertisement">
