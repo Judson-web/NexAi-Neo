@@ -38,8 +38,14 @@ export default async function handler(req,res){
    if(String(body.action||"").toUpperCase()==="TEST_WEBHOOK"){
     const webhook=process.env.DISCORD_KINGSHOT_WEBHOOK_URL||process.env.DISCORD_SCRAPER_WEBHOOK_URL;
     if(!webhook)return res.status(503).json({error:"Discord webhook is not configured."});
+    const clean=(value,fallback,max)=>{const v=String(value??"").trim();return v?v.slice(0,max):fallback};
+    const title=clean(body.title,"🧪 Webhook Test",256);
+    const description=clean(body.description,"Kingshot Auto Redeem webhook is connected successfully.",1024);
+    const status=clean(body.status,"Connected",1024);
+    const triggeredBy=clean(body.triggeredBy,"Admin panel",1024);
+    const footer=clean(body.footer,"Kingshot Redeemer",2048);
     const now=new Date();
-    const payload={username:"Kingshot Auto Redeem",embeds:[{title:"🧪 Webhook Test",description:"Kingshot Auto Redeem webhook is connected successfully.",color:0x5865F2,fields:[{name:"Status",value:"Connected",inline:true},{name:"Triggered by",value:"Admin panel",inline:true}],timestamp:now.toISOString(),footer:{text:"Kingshot Redeemer"}}]};
+    const payload={username:"Kingshot Auto Redeem",embeds:[{title,description,color:0x5865F2,fields:[{name:"Status",value:status,inline:true},{name:"Triggered by",value:triggeredBy,inline:true}],timestamp:now.toISOString(),footer:{text:footer}}]};
     const wr=await fetch(webhook,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload),signal:AbortSignal.timeout(5000)});
     if(!wr.ok)return res.status(502).json({error:"Discord rejected the webhook request ("+wr.status+")."});
     return res.status(200).json({ok:true});
