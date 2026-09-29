@@ -615,3 +615,39 @@ footer>span:last-child a:hover{color:#fff}
  .banner-ad-body{padding:8px}
  .banner-ad-headline{font-size:8.5px}
 }
+
+
+/* Final mobile polish */
+@media(max-width:680px){
+ body{overflow-x:hidden}
+ .app>header{padding:0 16px}
+ .ks-app header nav,.ks-auto-app header nav{display:none}
+ .ks-hero,.ks-auto-hero{padding:38px 0 38px;text-align:left}
+ .ks-hero .eyebrow,.ks-auto-hero .eyebrow{justify-content:flex-start;font-size:8px}
+ .ks-hero h1,.ks-auto-hero h1{font-size:clamp(42px,11.5vw,54px);line-height:.91;letter-spacing:-.075em;margin:16px 0 15px}
+ .ks-hero .hero-copy,.ks-auto-hero .hero-copy{font-size:12px;line-height:1.6;margin:0 0 24px;max-width:520px}
+ .ks-form,.ks-register-box{margin-top:22px}
+ .ks-field,.ks-register-field{border-radius:14px;background:#0e1015;border-color:#242833;box-shadow:0 8px 24px #0003}
+ .ks-field{height:58px;padding:10px 13px}
+ .ks-register-field{min-height:76px;padding:11px 13px}
+ .ks-submit{height:52px;border-radius:13px;font-size:10px;box-shadow:0 8px 24px #8c612d28}
+ .banner-ad{width:calc(100% - 32px);margin:8px auto 0}
+ .banner-ad-label{height:13px;margin:0 0 5px 1px;letter-spacing:.13em}
+ .banner-ad-card{display:block;height:108px;min-height:108px;border-radius:12px;box-shadow:0 10px 30px #0006}
+ .banner-ad-creative,.banner-ad-creative img{width:100%;height:108px;min-height:108px;max-height:none}
+ .banner-ad-creative:after{background:linear-gradient(90deg,#05060aaa 0%,#05060a22 48%,#05060a08 100%)}
+ .banner-ad-body{position:absolute;inset:auto 0 0 0;z-index:2;height:auto;min-height:48px;padding:8px 42px 9px 11px;display:block;border:0;border-top:1px solid #ffffff10;background:linear-gradient(0deg,#07080ce8,#07080c99 70%,transparent)}
+ .banner-ad-meta{font-size:5.5px;margin-bottom:3px}
+ .banner-ad-headline{font-size:10px;line-height:1.15;-webkit-line-clamp:1;text-shadow:0 1px 8px #000}
+ .banner-ad-cta{position:absolute;right:9px;bottom:9px;padding:5px 7px;font-size:5.5px;background:#17141fd9}
+ .banner-ad-close{top:7px;right:7px;background:#07080bd9;backdrop-filter:blur(8px)}
+ .ks-how,.ks-auto-how{padding-top:4px}
+ .feature-grid{gap:7px}
+}
+@media(max-width:430px){
+ .app>header{padding:0 14px}
+ .banner-ad{width:calc(100% - 28px)}
+ .banner-ad-card,.banner-ad-creative,.banner-ad-creative img{height:100px;min-height:100px}
+ .ks-hero,.ks-auto-hero{padding-top:32px}
+ .ks-hero h1,.ks-auto-hero h1{font-size:43px}
+}
