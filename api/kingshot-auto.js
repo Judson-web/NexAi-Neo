@@ -155,6 +155,42 @@ async function ensureCurrentKingdom(player){
  return {player:updated,revalidated:true,kingdomChanged:Boolean(result?.kingdom_changed)};
 }
 
+async function updateScraperHealth(source,codeCount,error=null){
+ try{
+  const result=await rpc("record_kingshot_scraper_health",{p_source:source,p_code_count:codeCount,p_error:error});
+  const health=Array.isArray(result)?result[0]:result;
+  const webhook=process.env.DISCORD_SCRAPER_WEBHOOK_URL;
+  if(webhook&&(health?.alert||health?.recovered)){
+   const prefix=health.alert?"🚨 Kingshot scraper alert":"✅ Kingshot scraper recovered";
+   const detail=health.alert
+    ? source+" returned no usable gift codes for 3 consecutive runs."
+    : source+" is returning gift codes again.";
+   await fetch(webhook,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({content:prefix+" — "+detail+" Count: "+String(codeCount)+"."}),signal:AbortSignal.timeout(5000)}).catch(()=>{});
+  }
+ }catch(error){console.error("Scraper health update failed:",source,error?.message||error)}
+}
+
+async function fetchSource(url,kind){
+ try{
+  const response=await fetch(url,{headers:kind==="api"?{"accept":"application/json","user-agent":"Nex-Kingshot-Redeemer/1.0"}:{"accept":"text/html","user-agent":"Nex-Kingshot-Redeemer/1.0"},signal:AbortSignal.timeout(15000)});
+  const body=await response.text();
+  if(!response.ok)throw Error("HTTP "+response.status);
+  if(kind==="api"){
+   let data=null;try{data=JSON.parse(body)}catch{}
+   const codes=data?.status==="success"?normalizeCodes(data):[];
+   await updateScraperHealth("kingshot-api",codes.length,data?.status==="success"?null:"Invalid API response");
+   return {data,codes};
+  }
+  const codes=extractPageCodes(body);
+  await updateScraperHealth("kingshot-page",codes.length,null);
+  return {html:body,codes};
+ }catch(error){
+  await updateScraperHealth(kind==="api"?"kingshot-api":"kingshot-page",0,error?.message||"Source request failed");
+  return kind==="api"?{data:null,codes:[]}:{html:"",codes:[]};
+ }
+
+}
+
 async function redeemForPlayer(player,codes){
  const kingdomState=await ensureCurrentKingdom(player);
  if(kingdomState.stale)return {attempted:0,success:0,alreadyHandled:0,skipped:1,stale:1};
@@ -206,17 +242,15 @@ export default async function handler(req,res){
  if(!authorized)return res.status(401).json({error:"Unauthorized"});
 
  try{
-  const [apiResponse,pageResponse,adminRows]=await Promise.all([
-   fetch(GIFT_SOURCE_URL,{headers:{"accept":"application/json","user-agent":"Nex-Kingshot-Redeemer/1.0"},signal:AbortSignal.timeout(15000)}),
-   fetch("https://kingshot.net/gift-codes",{headers:{"accept":"text/html","user-agent":"Nex-Kingshot-Redeemer/1.0"},signal:AbortSignal.timeout(15000)}),
+  const [apiSource,pageSource,adminRows]=await Promise.all([
+   fetchSource(GIFT_SOURCE_URL,"api"),
+   fetchSource("https://kingshot.net/gift-codes","page"),
    rpc("list_kingshot_admin_gift_codes",{})
   ]);
-  const raw=await apiResponse.text();
-  let data;
-  try{data=JSON.parse(raw)}catch{data=null}
-  const apiCodes=apiResponse.ok&&data?.status==="success"?normalizeCodes(data):[];
-  const pageHtml=pageResponse.ok?await pageResponse.text():"";
-  const pageCodes=extractPageCodes(pageHtml);
+  const data=apiSource.data;
+  const apiCodes=apiSource.codes;
+  const pageHtml=pageSource.html;
+  const pageCodes=pageSource.codes;
   const adminCodes=(Array.isArray(adminRows)?adminRows:[]).filter(row=>row?.active!==false).map(row=>({
    code:String(row?.code||"").trim(),
    expiresAt:null,
