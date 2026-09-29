@@ -768,3 +768,12 @@ footer>span:last-child a:hover{color:#fff}
  .admin-stats b{font-size:20px}
  .admin-code-list{display:grid}
 }
+
+/* Discord webhook alert panel */
+.admin-webhook-status{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border:1px solid rgba(87,242,135,.16);border-radius:14px;background:rgba(87,242,135,.035)}
+.admin-webhook-status>div{display:flex;align-items:center;gap:11px;min-width:0}
+.admin-webhook-status b{display:block;font-size:13px}
+.admin-webhook-status small{display:block;margin-top:3px;color:var(--muted,#7d7f8a);font-size:11px}
+.admin-webhook-dot{width:8px;height:8px;border-radius:50%;background:#57f287;box-shadow:0 0 0 4px rgba(87,242,135,.08);flex:0 0 auto}
+.admin-webhook-status .admin-code-add{width:auto;margin:0;white-space:nowrap}
+@media(max-width:640px){.admin-webhook-status{align-items:stretch;flex-direction:column}.admin-webhook-status .admin-code-add{width:100%}}
