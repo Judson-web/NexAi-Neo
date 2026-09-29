@@ -111,8 +111,55 @@ function mergeCodes(apiCodes,pageCodes){
 
 const HANDLED_STATUSES=new Set(["SUCCESS","RECEIVED","SAME TYPE EXCHANGE","TIME_ERROR","CDK_NOT_FOUND","USAGE_LIMIT"]);
 const PLAYER_CONCURRENCY=8;
+const KINGDOM_REVALIDATION_MS=24*60*60*1000;
+
+async function fetchCurrentKingshotPlayer(playerId){
+ const key=process.env.MIGHTPULSE_API_KEY||process.env.KSS_API_KEY;
+ if(!key)throw Error("MightPulse API key is not configured on the server.");
+ const r=await fetch("https://api.mightpulse.com/v1/players/"+encodeURIComponent(playerId)+"?include=base",{
+  headers:{Authorization:"Bearer "+key},
+  signal:AbortSignal.timeout(15000)
+ });
+ const d=await r.json().catch(()=>({}));
+ if(r.status===404)return {notFound:true};
+ if(!r.ok)throw Error(d?.message||d?.error||"MightPulse revalidation failed.");
+ return {player:d.player||d};
+}
+
+async function ensureCurrentKingdom(player){
+ const checkedAt=player.last_kingdom_check_at?Date.parse(player.last_kingdom_check_at):0;
+ if(checkedAt&&Date.now()-checkedAt<KINGDOM_REVALIDATION_MS)return {player,revalidated:false};
+
+ const fresh=await fetchCurrentKingshotPlayer(player.player_id);
+ if(fresh.notFound){
+  await rpc("mark_kingshot_player_stale",{p_player_id:player.player_id,p_reason:"MIGHTPULSE_PLAYER_NOT_FOUND"});
+  return {stale:true};
+ }
+
+ const p=fresh.player||{};
+ const currentKingdom=String(p.kid??p.kingdom_id??"").replace(/\D/g,"");
+ if(!currentKingdom)throw Error("MightPulse returned no kingdom for this player.");
+
+ const result=await rpc("record_kingshot_kingdom_revalidation",{
+  p_player_id:player.player_id,
+  p_kingdom_id:currentKingdom,
+  p_player_name:p.nick_name||p.name||p.nickname||null,
+  p_avatar_url:p.avatar_url||p.avatar||p.avatarUrl||null
+ });
+ const updated=result?.player||player;
+ if(result?.kingdom_changed)console.log("Kingshot kingdom changed:",{
+  playerId:player.player_id,
+  from:result.old_kingdom_id,
+  to:result.new_kingdom_id
+ });
+ return {player:updated,revalidated:true,kingdomChanged:Boolean(result?.kingdom_changed)};
+}
 
 async function redeemForPlayer(player,codes){
+ const kingdomState=await ensureCurrentKingdom(player);
+ if(kingdomState.stale)return {attempted:0,success:0,alreadyHandled:0,skipped:1,stale:1};
+ if(!kingdomState.player?.kingdom_id)return {attempted:0,success:0,alreadyHandled:0,skipped:1,revalidationError:1};
+ player=kingdomState.player;
  const history=await rpc("list_kingshot_player_redemptions",{p_player_id:player.player_id});
  const handled=new Set((Array.isArray(history)?history:[])
   .filter(row=>HANDLED_STATUSES.has(String(row?.status||"").toUpperCase()))
