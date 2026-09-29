@@ -14,12 +14,17 @@ async function rpc(name,body){
  return d;
 }
 
+const KNOWN_MIXED_CASE_CODES=new Set(["Kingshot888"]);
 function isLikelyGiftCode(value){
  const code=String(value||"").trim();
- if(!/^[A-Za-z0-9]{6,32}$/.test(code))return false;
- if(!/[A-Z]/.test(code))return false;
- if(!/[0-9]/.test(code)&&code!==code.toUpperCase())return false;
+ if(!code||code.length<6||code.length>32)return false;
+ // Kingshot codes are case-sensitive. Current codes are overwhelmingly
+ // uppercase A-Z/digits; preserve the documented mixed-case legacy code.
+ if(!/^[A-Z0-9]+$/.test(code)&&!KNOWN_MIXED_CASE_CODES.has(code))return false;
  if(/^u00[0-9a-f]+/i.test(code))return false;
+ // Never accept obvious page/UI prose even if it happens to be uppercase.
+ const blocked=new Set(["ACTIVE","EXPIRED","CONTINUE","COPYCODE","SIGNINTOREDEEM","SHARELINK","GIFTCODES","REDEEMGIFTCODE","GIFTCODE","LOADING","COMMUNITY","FEATURES","LATEST","CURRENT","POPULAR","PROFILE","PLAYER","KINGDOM","SERVER","MESSAGE","SETTINGS"]);
+ if(blocked.has(code.toUpperCase()))return false;
  return true;
 }
 function normalizeCodes(data){
@@ -170,7 +175,7 @@ export default async function handler(req,res){
    expiresAt:null,
    createdAt:row?.source_date?Date.parse(String(row.source_date)):Date.parse(String(row?.first_seen_at||"")),
    source:"admin"
-  })).filter(row=>/^[A-Za-z0-9_-]{4,64}$/.test(row.code));
+  })).filter(row=>isLikelyGiftCode(row.code));
   const codes=mergeCodes(apiCodes,[...pageCodes,...VERIFIED_FALLBACK_CODES,...adminCodes]);
   if(!codes.length)throw Error("Kingshot gift-code sources returned no active codes.");
   console.log("Kingshot auto feed:",{apiActive:data?.data?.activeCount??null,apiCodes:apiCodes.map(x=>x.code),pageCodes:pageCodes.map(x=>x.code),adminCodes:adminCodes.map(x=>x.code),merged:codes.map(x=>x.code)});
