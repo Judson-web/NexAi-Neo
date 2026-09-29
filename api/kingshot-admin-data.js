@@ -40,8 +40,7 @@ export default async function handler(req,res){
     if(!botToken)return res.status(503).json({error:"Discord bot token is not configured."});
     const commands=[
      {name:"player",description:"Look up a Kingshot player from MightPulse",type:1,options:[
-      {name:"player_id",description:"Kingshot Player ID",type:3,required:true,min_length:5,max_length:20},
-      {name:"private",description:"Send the player details privately",type:5,required:false}
+      {name:"id",description:"Kingshot Player ID",type:3,required:true,min_length:5,max_length:20}
      ]},
      {name:"register",description:"Enable Kingshot auto-redeem for a Player ID",type:1,options:[
       {name:"player_id",description:"Kingshot Player ID",type:3,required:true,min_length:5,max_length:20}
