@@ -538,3 +538,27 @@ footer>span:last-child a:hover{color:#fff}
  .banner-ad-cta{font-size:6px;padding:5px 7px}
  .banner-ad-copy b{font-size:11px}
 }
+
+
+/* Ad campaign editor: structured, professional control surface */
+.ad-form{gap:10px}
+.ad-form-section{padding:14px;border:1px solid #20232d;border-radius:12px;background:#0b0d12;display:grid;gap:11px}
+.ad-form-section-head{display:flex;align-items:flex-start;gap:10px;padding-bottom:10px;border-bottom:1px solid #191c24}
+.ad-form-section-head>span{width:24px;height:24px;display:grid;place-items:center;border:1px solid #302943;border-radius:7px;background:#15121d;color:#9e91bd;font:800 7px/1 ui-monospace,SFMono-Regular,Menlo,monospace;flex:none}
+.ad-form-section-head div{display:grid;gap:3px}
+.ad-form-section-head b{color:#dfe2e8;font-size:10px;letter-spacing:-.01em}
+.ad-form-section-head small{color:#626a77;font-size:7px;line-height:1.45}
+.ad-form-section label{gap:6px}
+.ad-field-help{color:#555d6a!important;font-size:6.5px!important;line-height:1.4;font-weight:500!important;letter-spacing:0!important}
+.ad-color-preview{height:42px;display:flex;align-items:center;gap:8px;padding:0 11px;border:1px solid #292d38;border-radius:9px;background:#11131a;color:#606875}
+.ad-color-preview span{width:18px;height:18px;border:1px solid #ffffff20;border-radius:5px;box-shadow:0 0 0 1px #0005}
+.ad-color-preview small{font-size:7px}
+.ad-form-actions{display:grid;grid-template-columns:auto 1fr;gap:8px;margin-top:1px}
+.ad-form-actions .ad-ghost{min-width:90px}
+.ad-form-actions .ad-save{margin:0}
+.ad-editor{padding:14px}
+@media(max-width:560px){
+ .ad-form-section{padding:12px}
+ .ad-form-actions{grid-template-columns:1fr 1.8fr}
+ .ad-form-actions .ad-ghost{min-width:0}
+}
