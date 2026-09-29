@@ -1,5 +1,5 @@
 import React,{useEffect,useState}from"react";
-import{ChevronDown,LoaderCircle,LogOut,RefreshCw,ShieldCheck,UserX,XCircle,Inbox,Gift,Plus}from"lucide-react";
+import{ChevronDown,LoaderCircle,LogOut,RefreshCw,ShieldCheck,UserX,XCircle,Inbox,Gift,Plus,Megaphone}from"lucide-react";
 export default function AdminApp(){
  const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[players,setPlayers]=useState([]),[tickets,setTickets]=useState([]),[giftCodes,setGiftCodes]=useState([]),[giftCode,setGiftCode]=useState(""),[sourceDate,setSourceDate]=useState(""),[auth,setAuth]=useState(false),[busy,setBusy]=useState(true),[codeBusy,setCodeBusy]=useState(false),[error,setError]=useState(""),[codeError,setCodeError]=useState(""),[codeSuccess,setCodeSuccess]=useState(""),[open,setOpen]=useState(null);
  const load=async()=>{setBusy(true);setError("");try{const r=await fetch("/api/kingshot-admin-data",{credentials:"same-origin"});const d=await r.json().catch(()=>({}));if(r.status===401){setAuth(false);setPlayers([]);setTickets([]);setGiftCodes([]);return}if(!r.ok)throw Error(d.error||"Could not load data.");setAuth(true);setPlayers((d.players||[]).filter(p=>p.enabled));setTickets(d.tickets||[]);setGiftCodes(d.giftCodes||[])}catch(e){setError(e.message||"Could not load data.")}finally{setBusy(false)}};
