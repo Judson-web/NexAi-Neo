@@ -1,0 +1,23 @@
+-- Analytics, audit, scraper comparison, and targeted query indexes
+alter table public.kingshot_banner_ads add column if not exists unique_impressions bigint not null default 0, add column if not exists raw_clicks bigint not null default 0, add column if not exists unique_clicks bigint not null default 0;
+update public.kingshot_banner_ads set raw_clicks=coalesce(raw_clicks,clicks),unique_clicks=coalesce(unique_clicks,clicks);
+create table if not exists public.kingshot_banner_impression_dedupe(ad_id uuid not null references public.kingshot_banner_ads(id) on delete cascade,visitor_hash text not null,last_impression_at timestamptz not null default now(),primary key(ad_id,visitor_hash));
+alter table public.kingshot_banner_impression_dedupe enable row level security;
+revoke all on public.kingshot_banner_impression_dedupe from anon,authenticated;
+create table if not exists public.kingshot_admin_audit_log(id uuid primary key default gen_random_uuid(),actor_email text not null,action text not null,target_type text,target_id text,details jsonb not null default '{}'::jsonb,created_at timestamptz not null default now());
+create index if not exists kingshot_admin_audit_created_idx on public.kingshot_admin_audit_log(created_at desc);
+create index if not exists kingshot_admin_audit_action_idx on public.kingshot_admin_audit_log(action,created_at desc);
+alter table public.kingshot_admin_audit_log enable row level security;
+revoke all on public.kingshot_admin_audit_log from anon,authenticated;
+create table if not exists public.kingshot_scraper_runs(id uuid primary key default gen_random_uuid(),source text not null,checked_at timestamptz not null default now(),http_status integer,code_count integer not null default 0,codes jsonb not null default '[]'::jsonb,parse_ok boolean not null default false,error_category text,error_message text);
+create index if not exists kingshot_scraper_runs_source_checked_idx on public.kingshot_scraper_runs(source,checked_at desc);
+create index if not exists kingshot_scraper_runs_checked_idx on public.kingshot_scraper_runs(checked_at desc);
+alter table public.kingshot_scraper_runs enable row level security;
+revoke all on public.kingshot_scraper_runs from anon,authenticated;
+create index if not exists kingshot_autoredeem_reset_check_idx on public.kingshot_autoredeem(enabled,last_kingdom_check_at) where enabled=true;
+create index if not exists kingshot_autoredeem_stale_idx on public.kingshot_autoredeem(stale,enabled,updated_at desc);
+create index if not exists kingshot_redemptions_status_attempted_idx on public.kingshot_redemptions(status,attempted_at desc);
+create index if not exists kingshot_redemptions_code_attempted_idx on public.kingshot_redemptions(gift_code,attempted_at desc);
+create index if not exists kingshot_gift_codes_active_seen_idx on public.kingshot_gift_codes(active,last_seen_at desc);
+create index if not exists kingshot_banner_ads_rotation_idx on public.kingshot_banner_ads(active,site,placement,last_served_at,created_at);
+create index if not exists kingshot_banner_ads_schedule_idx on public.kingshot_banner_ads(active,starts_at,ends_at);
