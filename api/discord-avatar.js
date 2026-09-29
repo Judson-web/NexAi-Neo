@@ -22,7 +22,7 @@ export default async function handler(req,res){
     const type=r.headers.get("content-type")||`image/${format}`;
     const data=Buffer.from(await r.arrayBuffer());
     res.setHeader("Content-Type",type);
-    res.setHeader("Cache-Control","public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800");
+    res.setHeader("Cache-Control","public, max-age=86400, s-maxage=2592000, stale-while-revalidate=604800");
     res.setHeader("Content-Length",String(data.length));
     return res.status(200).send(data);
   }catch(e){console.error("discord-avatar",e);return res.status(e?.name==="AbortError"?504:502).json({error:e?.name==="AbortError"?"The avatar took too long to load. Please try again.":"Could not load the avatar right now."})}
