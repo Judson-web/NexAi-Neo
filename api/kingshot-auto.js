@@ -146,9 +146,10 @@ export default async function handler(req,res){
  if(!authorized)return res.status(401).json({error:"Unauthorized"});
 
  try{
-  const [apiResponse,pageResponse]=await Promise.all([
+  const [apiResponse,pageResponse,adminRows]=await Promise.all([
    fetch(GIFT_SOURCE_URL,{headers:{"accept":"application/json","user-agent":"Nex-Kingshot-Redeemer/1.0"},signal:AbortSignal.timeout(15000)}),
-   fetch("https://kingshot.net/gift-codes",{headers:{"accept":"text/html","user-agent":"Nex-Kingshot-Redeemer/1.0"},signal:AbortSignal.timeout(15000)})
+   fetch("https://kingshot.net/gift-codes",{headers:{"accept":"text/html","user-agent":"Nex-Kingshot-Redeemer/1.0"},signal:AbortSignal.timeout(15000)}),
+   rpc("list_kingshot_admin_gift_codes",{})
   ]);
   const raw=await apiResponse.text();
   let data;
@@ -156,9 +157,15 @@ export default async function handler(req,res){
   const apiCodes=apiResponse.ok&&data?.status==="success"?normalizeCodes(data):[];
   const pageHtml=pageResponse.ok?await pageResponse.text():"";
   const pageCodes=extractPageCodes(pageHtml);
-  const codes=mergeCodes(apiCodes,[...pageCodes,...VERIFIED_FALLBACK_CODES]);
+  const adminCodes=(Array.isArray(adminRows)?adminRows:[]).filter(row=>row?.active!==false).map(row=>({
+   code:String(row?.code||"").trim(),
+   expiresAt:null,
+   createdAt:row?.source_date?Date.parse(String(row.source_date)):Date.parse(String(row?.first_seen_at||"")),
+   source:"admin"
+  })).filter(row=>/^[A-Za-z0-9_-]{4,64}$/.test(row.code));
+  const codes=mergeCodes(apiCodes,[...pageCodes,...VERIFIED_FALLBACK_CODES,...adminCodes]);
   if(!codes.length)throw Error("Kingshot gift-code sources returned no active codes.");
-  console.log("Kingshot auto feed:",{apiActive:data?.data?.activeCount??null,apiCodes:apiCodes.map(x=>x.code),pageCodes:pageCodes.map(x=>x.code),merged:codes.map(x=>x.code)});
+  console.log("Kingshot auto feed:",{apiActive:data?.data?.activeCount??null,apiCodes:apiCodes.map(x=>x.code),pageCodes:pageCodes.map(x=>x.code),adminCodes:adminCodes.map(x=>x.code),merged:codes.map(x=>x.code)});
   await Promise.all(codes.map(item=>rpc("upsert_kingshot_gift_code",{
    p_code:item.code,
    p_source_date:item.createdAt&&!Number.isNaN(item.createdAt)?new Date(item.createdAt).toISOString().slice(0,10):null
