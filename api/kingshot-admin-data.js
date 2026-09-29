@@ -35,43 +35,6 @@ export default async function handler(req,res){
   const valid=await rpc("kingshot_admin_validate_session",{p_token_hash:tokenHash});if(!valid)return res.status(401).json({error:"Unauthorized"});
   if(req.method==="POST"){
    const body=req.body||{};
-   if(String(body.action||"").toUpperCase()==="REGISTER_DISCORD_COMMANDS"){
-    const botToken=process.env.DISCORD_BOT_TOKEN;
-    if(!botToken)return res.status(503).json({error:"Discord bot token is not configured."});
-    const commands=[
-     {name:"player",description:"Look up a Kingshot player from MightPulse",type:1,options:[
-      {name:"id",description:"Kingshot Player ID",type:3,required:true,min_length:5,max_length:20
-     }]},
-     {name:"register",description:"Enable Kingshot auto-redeem for a Player ID",type:1,options:[
-      {name:"player_id",description:"Kingshot Player ID",type:3,required:true,min_length:5,max_length:20
-     }]}
-    ];
-    const headers={Authorization:"Bot "+botToken,"Content-Type":"application/json"};
-    const me=await fetch("https://discord.com/api/v10/users/@me",{headers,signal:AbortSignal.timeout(8000)});
-    const meData=await me.json().catch(()=>({}));
-    if(!me.ok||!meData?.id)return res.status(502).json({error:"Discord bot authentication failed."});
-    const appId=String(meData.id);
-    const guildId=String(body.guildId||"").trim();
-    if(guildId&&!/^\\d{17,20}$/.test(guildId))return res.status(400).json({error:"Invalid Discord Server ID."});
-
-    // Try guild registration first for immediate availability. If Discord says the
-    // application cannot access the guild, fall back to global registration so the
-    // button still works without requiring a server-specific bot installation.
-    if(guildId){
-     const endpoint="https://discord.com/api/v10/applications/"+appId+"/guilds/"+encodeURIComponent(guildId)+"/commands";
-     const cr=await fetch(endpoint,{method:"PUT",headers,body:JSON.stringify(commands),signal:AbortSignal.timeout(10000)});
-     const cd=await cr.json().catch(()=>({}));
-     if(cr.ok)return res.status(200).json({ok:true,scope:"guild",guildId,commands:cd.map(x=>x.name),definitions:cd.map(x=>({name:x.name,options:(x.options||[]).map(o=>({name:o.name,required:Boolean(o.required),type:o.type}))}))});
-     if(![403,404].includes(cr.status))return res.status(502).json({error:cd?.message||"Discord rejected command registration."});
-    }
-
-    // Global registration does not require guild access. This is the reliable
-    // fallback for apps whose bot has not been installed in the selected server.
-    const global=await fetch("https://discord.com/api/v10/applications/"+appId+"/commands",{method:"PUT",headers,body:JSON.stringify(commands),signal:AbortSignal.timeout(10000)});
-    const gd=await global.json().catch(()=>({}));
-    if(!global.ok)return res.status(502).json({error:gd?.message||"Discord rejected global command registration."});
-    return res.status(200).json({ok:true,scope:"global",guildId:guildId||null,commands:gd.map(x=>x.name),definitions:gd.map(x=>({name:x.name,options:(x.options||[]).map(o=>({name:o.name,required:Boolean(o.required),type:o.type}))})),note:"Guild access was unavailable, so the current commands were registered globally. Global command propagation can take some time."});
-   }
    if(String(body.action||"").toUpperCase()==="TEST_WEBHOOK"){
     const webhook=process.env.DISCORD_KINGSHOT_WEBHOOK_URL||process.env.DISCORD_SCRAPER_WEBHOOK_URL;
     if(!webhook)return res.status(503).json({error:"Discord webhook is not configured."});
@@ -83,9 +46,14 @@ export default async function handler(req,res){
     const footer=clean(body.footer,"Kingshot Redeemer",2048);
     const now=new Date();
     const payload={username:"Kingshot Auto Redeem",embeds:[{title,description,color:0x5865F2,fields:[{name:"Status",value:status,inline:true},{name:"Triggered by",value:triggeredBy,inline:true}],timestamp:now.toISOString(),footer:{text:footer}}]};
-    const wr=await fetch(webhook,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload),signal:AbortSignal.timeout(5000)});
-    if(!wr.ok)return res.status(502).json({error:"Discord rejected the webhook request ("+wr.status+")."});
-    return res.status(200).json({ok:true});
+    const started=Date.now();
+    const wr=await fetch(webhook,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...payload,allowed_mentions:{parse:[]}}),signal:AbortSignal.timeout(8000)});
+    if(!wr.ok){
+     const retryAfter=Number(wr.headers.get("retry-after")||"0");
+     const detail=await wr.text().catch(()=>"");
+     return res.status(502).json({error:"Discord webhook rejected the alert ("+wr.status+")."+(retryAfter? " Retry after "+Math.ceil(retryAfter)+"s.":"")+(detail? " "+detail.slice(0,180):"")});
+    }
+    return res.status(200).json({ok:true,latencyMs:Date.now()-started});
    }
    if(String(body.adAction||"")==="upsert"){
     const id=body.id&&/^[0-9a-f-]{36}$/.test(String(body.id))?String(body.id):null;
