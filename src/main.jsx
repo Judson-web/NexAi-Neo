@@ -1,6 +1,6 @@
 import React,{useEffect,useState}from"react";
 import{createRoot}from"react-dom/client";
-import{Copy,Download,ExternalLink,Gift,Image as ImageIcon,Link2,Menu,Search,ShieldCheck,Sparkles,X,CheckCircle,LoaderCircle,Github,BarChart3,Megaphone,Pencil,Trash2,MousePointerClick,LogOut,Plus,Eye}from"lucide-react";
+import{Copy,Download,ExternalLink,Gift,Image as ImageIcon,Link2,Menu,Search,ShieldCheck,Sparkles,X,CheckCircle,LoaderCircle,Github,BarChart3,Megaphone,Pencil,Trash2,MousePointerClick,LogOut,Plus,Eye,RefreshCw}from"lucide-react";
 import"./styles.css";
 import AdminApp from"./AdminApp.jsx";
 import LegalApp from"./LegalApp.jsx";
