@@ -47,18 +47,26 @@ export default async function handler(req,res){
       {name:"player_id",description:"Kingshot Player ID",type:3,required:true,min_length:5,max_length:20}
      ]}
     ];
-    const me=await fetch("https://discord.com/api/v10/users/@me",{headers:{Authorization:"Bot "+botToken},signal:AbortSignal.timeout(8000)});
+    const headers={Authorization:"Bot "+botToken,"Content-Type":"application/json"};
+    const me=await fetch("https://discord.com/api/v10/users/@me",{headers,signal:AbortSignal.timeout(8000)});
     const meData=await me.json().catch(()=>({}));
     if(!me.ok||!meData?.id)return res.status(502).json({error:"Discord bot authentication failed."});
+    const appId=String(meData.id);
     const guildId=String(body.guildId||"").trim();
     if(guildId&&!/^\d{17,20}$/.test(guildId))return res.status(400).json({error:"Invalid Discord Server ID."});
-    const endpoint=guildId
-      ?"https://discord.com/api/v10/applications/"+meData.id+"/guilds/"+encodeURIComponent(guildId)+"/commands"
-      :"https://discord.com/api/v10/applications/"+meData.id+"/commands";
-    const cr=await fetch(endpoint,{method:"PUT",headers:{Authorization:"Bot "+botToken,"Content-Type":"application/json"},body:JSON.stringify(commands),signal:AbortSignal.timeout(10000)});
+    // Remove legacy global commands from this same Discord application first.
+    const clearGlobal=await fetch("https://discord.com/api/v10/applications/"+appId+"/commands",{method:"PUT",headers,body:"[]",signal:AbortSignal.timeout(10000)});
+    if(!clearGlobal.ok){
+     const d=await clearGlobal.json().catch(()=>({}));
+     return res.status(502).json({error:d?.message||"Could not clear legacy global Discord commands."});
+    }
+    if(!guildId)return res.status(400).json({error:"Discord Server ID is required. Enter the server ID to install the current commands and remove legacy global commands."});
+    // Replace every command in the selected guild with the current two commands.
+    const endpoint="https://discord.com/api/v10/applications/"+appId+"/guilds/"+encodeURIComponent(guildId)+"/commands";
+    const cr=await fetch(endpoint,{method:"PUT",headers,body:JSON.stringify(commands),signal:AbortSignal.timeout(10000)});
     const cd=await cr.json().catch(()=>({}));
     if(!cr.ok)return res.status(502).json({error:cd?.message||"Discord rejected command registration."});
-    return res.status(200).json({ok:true,scope:guildId?"guild":"global",guildId:guildId||null,commands:cd.map(x=>x.name),definitions:cd.map(x=>({name:x.name,options:(x.options||[]).map(o=>({name:o.name,required:Boolean(o.required),type:o.type}))}))});
+    return res.status(200).json({ok:true,scope:"guild",guildId,legacyGlobalCommandsRemoved:true,commands:cd.map(x=>x.name),definitions:cd.map(x=>({name:x.name,options:(x.options||[]).map(o=>({name:o.name,required:Boolean(o.required),type:o.type}))}))});
    }
    if(String(body.action||"").toUpperCase()==="TEST_WEBHOOK"){
     const webhook=process.env.DISCORD_KINGSHOT_WEBHOOK_URL||process.env.DISCORD_SCRAPER_WEBHOOK_URL;
