@@ -35,6 +35,16 @@ export default async function handler(req,res){
   const valid=await rpc("kingshot_admin_validate_session",{p_token_hash:tokenHash});if(!valid)return res.status(401).json({error:"Unauthorized"});
   if(req.method==="POST"){
    const body=req.body||{};
+   if(String(body.action||"").toUpperCase()==="TEST_WEBHOOK"){
+    const webhook=process.env.DISCORD_KINGSHOT_WEBHOOK_URL||process.env.DISCORD_SCRAPER_WEBHOOK_URL;
+    if(!webhook)return res.status(503).json({error:"Discord webhook is not configured."});
+    const now=new Date();
+    const payload={username:"Kingshot Auto Redeem",embeds:[{title:"🧪 Webhook Test",description:"Kingshot Auto Redeem webhook is connected successfully.",color:0x5865F2,fields:[{name:"Status",value:"Connected",inline:true},{name:"Triggered by",value:"Admin panel",inline:true}],timestamp:now.toISOString(),footer:{text:"Kingshot Redeemer"}}]};
+    const wr=await fetch(webhook,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload),signal:AbortSignal.timeout(5000)});
+    if(!wr.ok)return res.status(502).json({error:"Discord rejected the webhook request ("+wr.status+")."});
+    return res.status(200).json({ok:true});
+   }
+   const body=req.body||{};
    if(String(body.adAction||"")==="upsert"){
     const id=body.id&&/^[0-9a-f-]{36}$/.test(String(body.id))?String(body.id):null;
     const ad=await rpc("kingshot_admin_upsert_banner_ad",{p_token_hash:tokenHash,p_id:id,p_name:String(body.name||""),p_advertiser:String(body.advertiser||""),p_site:String(body.site||"all"),p_placement:String(body.placement||"top"),p_image_url:body.image_url?String(body.image_url):null,p_click_url:String(body.click_url||""),p_alt_text:String(body.alt_text||"Advertisement"),p_headline:String(body.headline||""),p_cta_label:String(body.cta_label||"Learn more"),p_background:String(body.background||"#11131a"),p_active:body.active!==false,p_starts_at:body.starts_at||null,p_ends_at:body.ends_at||null});
