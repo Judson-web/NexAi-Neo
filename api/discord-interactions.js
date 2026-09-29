@@ -92,15 +92,14 @@ async function handleCommand(req,interaction){
  const name=String(interaction.data?.name||"");
  const opts=interaction.data?.options||[];
  if(name==="player"){
-  const id=String(option(opts,"player_id")||"").trim();
-  const privateView=Boolean(option(opts,"private"));
+  const id=String(option(opts,"id")||"").trim();
   if(!/^\d{5,20}$/.test(id))return {content:"❌ Enter a valid Kingshot Player ID.",flags:64};
-  await interactionCallback(interaction.id,interaction.token,{type:5,data:{flags:privateView?64:0}});
+  await interactionCallback(interaction.id,interaction.token,{type:5,data:{}});
   try{
    const p=await fetchPlayer(id);
-   if(!p)return followup(interaction.token,{content:"❌ Player not found.",flags:privateView?64:0});
-   return followup(interaction.token,{embeds:[playerEmbed(p,privateView)],flags:privateView?64:0});
-  }catch(e){return followup(interaction.token,{content:"❌ "+safe(e.message,"Player lookup failed."),flags:64})}
+   if(!p)return followup(interaction.token,{content:"❌ Player not found."});
+   return followup(interaction.token,{embeds:[playerEmbed(p,false)]});
+  }catch(e){return followup(interaction.token,{content:"❌ "+safe(e.message,"Player lookup failed.")})}
  }
  if(name==="register"){
   const id=String(option(opts,"player_id")||"").trim();
