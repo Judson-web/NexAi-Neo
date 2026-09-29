@@ -53,7 +53,8 @@ export default async function handler(req,res){
      const detail=await wr.text().catch(()=>"");
      return res.status(502).json({error:"Discord webhook rejected the alert ("+wr.status+")."+(retryAfter? " Retry after "+Math.ceil(retryAfter)+"s.":"")+(detail? " "+detail.slice(0,180):"")});
     }
-    await audit("TEST_WEBHOOK","webhook",null,{latencyMs:Date.now()-started});\n    return res.status(200).json({ok:true,latencyMs:Date.now()-started});
+    await audit("TEST_WEBHOOK","webhook",null,{latencyMs:Date.now()-started});
+    return res.status(200).json({ok:true,latencyMs:Date.now()-started});
    }
    if(String(body.adAction||"")==="upsert"){
     const id=body.id&&/^[0-9a-f-]{36}$/.test(String(body.id))?String(body.id):null;
@@ -68,7 +69,8 @@ export default async function handler(req,res){
    const giftCodes=await rpc("kingshot_admin_list_gift_codes",{p_token_hash:tokenHash});
    const row=Array.isArray(existing)?existing[0]:existing;
    const list=Array.isArray(giftCodes)?giftCodes:[];
-   await audit("ADD_GIFT_CODE","gift_code",row?.id||null,{code:row?.code||code,sourceDate});\n   return res.status(200).json({ok:true,code:row?.code||code,existing:Boolean(row?.first_seen_at&&row?.last_seen_at&&row.first_seen_at!==row.last_seen_at),giftCodes:list});
+   await audit("ADD_GIFT_CODE","gift_code",row?.id||null,{code:row?.code||code,sourceDate});
+   return res.status(200).json({ok:true,code:row?.code||code,existing:Boolean(row?.first_seen_at&&row?.last_seen_at&&row.first_seen_at!==row.last_seen_at),giftCodes:list});
   }
   if(req.method==="DELETE"){
    const body=req.body||{};
@@ -76,9 +78,10 @@ export default async function handler(req,res){
     const id=String(body.id||"");if(!/^[0-9a-f-]{36}$/.test(id))return res.status(400).json({error:"Invalid advertisement."});
     const ok=await rpc("kingshot_admin_delete_banner_ad",{p_token_hash:tokenHash,p_id:id});
     const bannerAds=await rpc("kingshot_admin_list_banner_ads",{p_token_hash:tokenHash});
-    await audit("DELETE_BANNER","banner",id,{});\n    return res.status(200).json({ok:Boolean(ok),bannerAds:Array.isArray(bannerAds)?bannerAds:[]});
+    await audit("DELETE_BANNER","banner",id,{});
+    return res.status(200).json({ok:Boolean(ok),bannerAds:Array.isArray(bannerAds)?bannerAds:[],auditLog:Array.isArray(auditLog)?auditLog:[],scraperComparison:Array.isArray(scraperComparison)?scraperComparison:[]});
    }
-   const playerId=String(body.playerId||"").trim();if(!/^[0-9]{5,20}$/.test(playerId))return res.status(400).json({error:"Invalid Player ID."});const ok=await rpc("kingshot_admin_set_player_enabled",{p_token_hash:tokenHash,p_player_id:playerId,p_enabled:false});return res.status(200).json({ok:Boolean(ok)});}
+   const playerId=String(body.playerId||"").trim();if(!/^[0-9]{5,20}$/.test(playerId))return res.status(400).json({error:"Invalid Player ID."});const ok=await rpc("kingshot_admin_set_player_enabled",{p_token_hash:tokenHash,p_player_id:playerId,p_enabled:false});await audit("REVOKE_PLAYER","player",playerId,{});return res.status(200).json({ok:Boolean(ok)});}
   if(req.method==="GET"){
    const [players,tickets,giftCodes,bannerAds,auditLog,scraperComparison]=await Promise.all([rpc("kingshot_admin_list_players",{}),rpc("kingshot_admin_list_tickets",{p_token_hash:tokenHash}),rpc("kingshot_admin_list_gift_codes",{p_token_hash:tokenHash}),rpc("kingshot_admin_list_banner_ads",{p_token_hash:tokenHash}),rpc("kingshot_admin_list_audit",{p_token_hash:tokenHash,p_limit:100}),rpc("kingshot_admin_scraper_comparison",{p_token_hash:tokenHash})]);
    return res.status(200).json({players:Array.isArray(players)?players:[],tickets:Array.isArray(tickets)?tickets:[],giftCodes:Array.isArray(giftCodes)?giftCodes:[],bannerAds:Array.isArray(bannerAds)?bannerAds:[]});
@@ -87,6 +90,7 @@ export default async function handler(req,res){
   if(!/^[0-9a-f-]{36}$/.test(ticketId))return res.status(400).json({error:"Invalid ticket."});
   if(!["REVOKE","CANCEL"].includes(action))return res.status(400).json({error:"Invalid action."});
   const ticket=await rpc("kingshot_admin_update_ticket",{p_token_hash:tokenHash,p_ticket_id:ticketId,p_action:action});
+  await audit(action==="REVOKE"?"REVOKE_TICKET":"CANCEL_TICKET","support_ticket",ticketId,{});
   return res.status(200).json({ok:true,ticket:Array.isArray(ticket)?ticket[0]:ticket});
  }catch(e){return res.status(502).json({error:e.message||"Could not process admin request."})}
 }
