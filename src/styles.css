@@ -490,3 +490,5 @@ footer>span:last-child a:hover{color:#fff}
  .ad-row-actions button{min-height:36px}
  .ad-login-card{padding:20px}
 }
+
+.ad-row-actions .ad-action-delete{color:#e58b98;border-color:#5a2932;background:#180e11}.ad-row-actions .ad-action-toggle{color:#d6c8ed}.ad-row-actions .ad-action-edit{color:#b9c0cc}.ad-status{display:inline-block!important;width:max-content;padding:3px 5px;border-radius:5px;font-size:6px!important;letter-spacing:.08em;font-weight:900;margin-top:5px!important}.ad-status.live{color:#8ed6a4!important;background:#122319}.ad-status.scheduled{color:#d8c487!important;background:#282315}.ad-status.off{color:#a0a6b0!important;background:#1b1d22}.ad-status.expired{color:#d98d98!important;background:#261316}
