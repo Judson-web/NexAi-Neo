@@ -146,9 +146,14 @@ async function fetchCurrentKingshotPlayer(playerId){
  return {player:d.player||d};
 }
 
+async function claimKingdomResetCheck(player){
+ if(!needsKingdomResetCheck(player.last_kingdom_check_at))return false;
+ const result=await rpc("claim_kingshot_kingdom_reset_check",{p_player_id:player.player_id});
+ return Boolean(result?.claimed);
+}
+
 async function ensureCurrentKingdom(player){
- const checkedAt=player.last_kingdom_check_at?Date.parse(player.last_kingdom_check_at):0;
- if(!needsKingdomResetCheck(player.last_kingdom_check_at))return {player,revalidated:false};
+ if(!(await claimKingdomResetCheck(player)))return {player,revalidated:false};
 
  const fresh=await fetchCurrentKingshotPlayer(player.player_id);
  if(fresh.notFound){
