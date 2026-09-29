@@ -8,11 +8,33 @@ async function rpc(name,body){const r=await fetch(SUPABASE_URL+"/rest/v1/rpc/"+n
 export default async function handler(req,res){
  if(!["GET","POST","PATCH","DELETE"].includes(req.method))return res.status(405).json({error:"Method not allowed"});
  try{
+  const publicMode=String(req.query?.public||"");
+  if(req.method==="GET"&&publicMode==="ad"){
+   const site=String(req.query?.site||"all"),placement=String(req.query?.placement||"top");
+   const row=await rpc("kingshot_public_banner_ad",{p_site:site,p_placement:placement});
+   const ad=Array.isArray(row)?row[0]:row;
+   return res.status(200).json({ad:ad||null});
+  }
+  if(req.method==="GET"&&publicMode==="click"){
+   const id=String(req.query?.id||"");
+   if(!/^[0-9a-f-]{36}$/.test(id))return res.status(400).json({error:"Invalid advertisement."});
+   const url=await rpc("kingshot_public_banner_click",{p_id:id});
+   res.setHeader("Cache-Control","no-store");
+   res.setHeader("Location",String(url));
+   return res.status(302).end();
+  }
   const session=getCookie(req);if(!session)return res.status(401).json({error:"Unauthorized"});
   const tokenHash=hash(session);
   const valid=await rpc("kingshot_admin_validate_session",{p_token_hash:tokenHash});if(!valid)return res.status(401).json({error:"Unauthorized"});
   if(req.method==="POST"){
-   const body=req.body||{},code=String(body.code||"").trim(),sourceDate=body.sourceDate?String(body.sourceDate).trim():null;
+   const body=req.body||{};
+   if(String(body.adAction||"")==="upsert"){
+    const id=body.id&&/^[0-9a-f-]{36}$/.test(String(body.id))?String(body.id):null;
+    const ad=await rpc("kingshot_admin_upsert_banner_ad",{p_token_hash:tokenHash,p_id:id,p_name:String(body.name||""),p_advertiser:String(body.advertiser||""),p_site:String(body.site||"all"),p_placement:String(body.placement||"top"),p_image_url:body.image_url?String(body.image_url):null,p_click_url:String(body.click_url||""),p_alt_text:String(body.alt_text||"Advertisement"),p_headline:String(body.headline||""),p_cta_label:String(body.cta_label||"Learn more"),p_background:String(body.background||"#11131a"),p_active:body.active!==false,p_starts_at:body.starts_at||null,p_ends_at:body.ends_at||null});
+    const bannerAds=await rpc("kingshot_admin_list_banner_ads",{p_token_hash:tokenHash});
+    return res.status(200).json({ok:true,ad:Array.isArray(ad)?ad[0]:ad,bannerAds:Array.isArray(bannerAds)?bannerAds:[]});
+   }
+   const code=String(body.code||"").trim(),sourceDate=body.sourceDate?String(body.sourceDate).trim():null;
    if(!(code==="Kingshot888"||/^[A-Z0-9]{6,32}$/.test(code)))return res.status(400).json({error:"Invalid gift code. Use 6-32 letters/numbers, with an uppercase letter and either a digit or all-uppercase text."});
    if(sourceDate&&!/^\d{4}-\d{2}-\d{2}$/.test(sourceDate))return res.status(400).json({error:"Invalid source date."});
    const existing=await rpc("kingshot_admin_add_gift_code",{p_token_hash:tokenHash,p_code:code,p_source_date:sourceDate});
@@ -21,10 +43,18 @@ export default async function handler(req,res){
    const list=Array.isArray(giftCodes)?giftCodes:[];
    return res.status(200).json({ok:true,code:row?.code||code,existing:Boolean(row?.first_seen_at&&row?.last_seen_at&&row.first_seen_at!==row.last_seen_at),giftCodes:list});
   }
-  if(req.method==="DELETE"){const body=req.body||{},playerId=String(body.playerId||"").trim();if(!/^[0-9]{5,20}$/.test(playerId))return res.status(400).json({error:"Invalid Player ID."});const ok=await rpc("kingshot_admin_set_player_enabled",{p_token_hash:tokenHash,p_player_id:playerId,p_enabled:false});return res.status(200).json({ok:Boolean(ok)});}
+  if(req.method==="DELETE"){
+   const body=req.body||{};
+   if(String(body.adAction||"")==="delete"){
+    const id=String(body.id||"");if(!/^[0-9a-f-]{36}$/.test(id))return res.status(400).json({error:"Invalid advertisement."});
+    const ok=await rpc("kingshot_admin_delete_banner_ad",{p_token_hash:tokenHash,p_id:id});
+    const bannerAds=await rpc("kingshot_admin_list_banner_ads",{p_token_hash:tokenHash});
+    return res.status(200).json({ok:Boolean(ok),bannerAds:Array.isArray(bannerAds)?bannerAds:[]});
+   }
+   const playerId=String(body.playerId||"").trim();if(!/^[0-9]{5,20}$/.test(playerId))return res.status(400).json({error:"Invalid Player ID."});const ok=await rpc("kingshot_admin_set_player_enabled",{p_token_hash:tokenHash,p_player_id:playerId,p_enabled:false});return res.status(200).json({ok:Boolean(ok)});}
   if(req.method==="GET"){
-   const [players,tickets,giftCodes]=await Promise.all([rpc("kingshot_admin_list_players",{}),rpc("kingshot_admin_list_tickets",{p_token_hash:tokenHash}),rpc("kingshot_admin_list_gift_codes",{p_token_hash:tokenHash})]);
-   return res.status(200).json({players:Array.isArray(players)?players:[],tickets:Array.isArray(tickets)?tickets:[],giftCodes:Array.isArray(giftCodes)?giftCodes:[]});
+   const [players,tickets,giftCodes,bannerAds]=await Promise.all([rpc("kingshot_admin_list_players",{}),rpc("kingshot_admin_list_tickets",{p_token_hash:tokenHash}),rpc("kingshot_admin_list_gift_codes",{p_token_hash:tokenHash}),rpc("kingshot_admin_list_banner_ads",{p_token_hash:tokenHash})]);
+   return res.status(200).json({players:Array.isArray(players)?players:[],tickets:Array.isArray(tickets)?tickets:[],giftCodes:Array.isArray(giftCodes)?giftCodes:[],bannerAds:Array.isArray(bannerAds)?bannerAds:[]});
   }
   const body=req.body||{},action=String(body.action||"").toUpperCase(),ticketId=String(body.ticketId||"");
   if(!/^[0-9a-f-]{36}$/.test(ticketId))return res.status(400).json({error:"Invalid ticket."});
