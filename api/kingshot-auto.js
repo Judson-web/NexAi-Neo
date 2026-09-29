@@ -271,7 +271,7 @@ async function redeemForPlayer(player,codes){
  const d=await redeemKingshot({playerId:player.player_id,code:item.code,kid:player.kingdom_id});
  const status=String(d?.status||"ERROR").toUpperCase();
  const message=d?.message||d?.error||"";
- await rpc("record_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code,p_status:status,p_err_code:d?.errCode??null,p_message:message});
+ await rpc("record_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code,p_status:status,p_err_code:d?.errCode??null,p_message:(d?.errorCategory?"["+d.errorCategory+"] ":"")+message});
  await sendDiscordEvent({title:(status==="SUCCESS"||status==="RECEIVED"||status==="SAME TYPE EXCHANGE"?"✅":"⚠️")+" Redemption "+status,description:message||"Kingshot redemption request completed.",fields:[{name:"Player ID",value:String(player.player_id),inline:true},{name:"Kingdom",value:String(player.kingdom_id||"Unknown"),inline:true},{name:"Gift code",value:String(item.code),inline:true}],color:(status==="SUCCESS"||status==="RECEIVED"||status==="SAME TYPE EXCHANGE")?0x57F287:0xFEE75C});
  return {attempted:1,success:status==="SUCCESS"?1:0,alreadyHandled:0,skipped:0,redemptionStatus:status};
 }
