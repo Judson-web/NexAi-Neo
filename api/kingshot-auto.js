@@ -40,12 +40,12 @@ function decodeHtml(value){
 
 function cleanPageLines(html){
  return decodeHtml(String(html||"")
-  .replace(/<script[\\s\\S]*?<\\/script>/gi," ")
-  .replace(/<style[\\s\\S]*?<\\/style>/gi," ")
-  .replace(/<\\/(?:p|div|section|article|li|h[1-6]|button|a|br|tr|td|header|footer)>/gi,"\\n")
+  .replace(/<script[\s\S]*?<\/script>/gi," ")
+  .replace(/<style[\s\S]*?<\/style>/gi," ")
+  .replace(/<\/(?:p|div|section|article|li|h[1-6]|button|a|br|tr|td|header|footer)>/gi,"\n")
   .replace(/<[^>]+>/g," ")
-  .split(/\\r?\\n/)
-  .map(line=>line.replace(/\\s+/g," ").trim())
+  .split(/\r?\n/)
+  .map(line=>line.replace(/\s+/g," ").trim())
   .filter(Boolean);
 }
 
@@ -62,8 +62,8 @@ function extractPageCodes(html){
  };
 
  // Handle explicit code attributes/links if the page exposes them.
- for(const match of source.matchAll(/(?:data-code|data-gift-code|giftCode|gift_code|["']code["'])\\s*[:=]\\s*["']([A-Za-z0-9_-]{4,64})["']/gi))add(match[1]);
- for(const match of source.matchAll(/\\/gift-codes\\/redeem\\?code=([A-Za-z0-9_-]{4,64})/gi))add(match[1]);
+ for(const match of source.matchAll(/(?:data-code|data-gift-code|giftCode|gift_code|["']code["'])\s*[:=]\s*["']([A-Za-z0-9_-]{4,64})["']/gi))add(match[1]);
+ for(const match of source.matchAll(/\/gift-codes\/redeem\?code=([A-Za-z0-9_-]{4,64})/gi))add(match[1]);
 
  // Otherwise parse only the visible Active Gift Codes card sequence.
  // Each active card is rendered as: Active -> CODE -> optional Expires: DATE.
@@ -77,7 +77,7 @@ function extractPageCodes(html){
    const codeLine=lines[i+1];
    if(!codeLine)continue;
    const expiryLine=lines[i+2]||"";
-   const expiryMatch=expiryLine.match(/^Expires:\\s*(\\d{1,2}\\/\\d{1,2}\\/\\d{4})$/i);
+   const expiryMatch=expiryLine.match(/^Expires:\s*(\d{1,2}\/\d{1,2}\/\d{4})$/i);
    const expiresAt=expiryMatch?Date.parse(expiryMatch[1]+" 23:59:59 UTC"):null;
    add(codeLine,expiresAt);
   }
