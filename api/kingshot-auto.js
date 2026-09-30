@@ -1,7 +1,7 @@
 import {redeemKingshot} from"../lib/kingshot-redeem.js";
 
 const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
-const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4TYTujQh8w5NyAJA_3H2K5CEg";
+const SUPABASE_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY;
 const GIFT_SOURCE_URL="https://kingshot.net/api/gift-codes";
 const PUBLIC_GIFT_SOURCES=[
  {name:"gamesradar",url:"https://www.gamesradar.com/games/strategy/kingshot-codes-gift/"},
@@ -14,7 +14,7 @@ const PUBLIC_GIFT_SOURCES=[
 // Revalidated against public Kingshot code listings; the redemption endpoint remains the final authority.
 const VERIFIED_FALLBACK_CODES=[{code:"VIP777",expiresAt:Date.parse("2026-12-31T23:59:59Z"),createdAt:Date.parse("2026-08-03T00:00:00Z")}];
 
-async function rpc(name,body){
+if(!SUPABASE_KEY)throw Error("Supabase service key is not configured on the server.");\n\nasync function rpc(name,body){
  const r=await fetch(SUPABASE_URL+"/rest/v1/rpc/"+name,{method:"POST",headers:{"apikey":SUPABASE_KEY,"authorization":"Bearer "+SUPABASE_KEY,"content-type":"application/json"},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
  const d=await r.json().catch(()=>null);
  if(!r.ok)throw Error(d?.message||"Supabase request failed");

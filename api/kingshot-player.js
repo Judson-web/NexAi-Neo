@@ -1,5 +1,8 @@
+import {rateLimit} from"../lib/request-rate-limit.js";
+
 export default async function handler(req,res){
  if(req.method!=="GET")return res.status(405).json({error:"Method not allowed"});
+ if(!rateLimit(req,res,"player-lookup",30,60000))return res.status(429).json({error:"Too many player lookups. Please try again shortly."});
  const id=String(req.query?.id||"").trim();
  if(!/^\d{5,20}$/.test(id))return res.status(400).json({error:"Invalid player ID."});
  const key=process.env.MIGHTPULSE_API_KEY||process.env.KSS_API_KEY;
