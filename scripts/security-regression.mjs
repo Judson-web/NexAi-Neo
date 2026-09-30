@@ -75,3 +75,6 @@ if(failed.length){
  process.exit(1);
 }
 console.log(`\\nSecurity regression checks passed: ${checks.length}/${checks.length}`);
+
+assertCheck("Admin data uses a server-only Supabase credential", /SUPABASE_SERVICE_ROLE_KEY\|\|process\.env\.SUPABASE_SECRET_KEY/.test(adminData));
+assertCheck("Admin privileged RPC migration revokes public execute", /revoke all on function public\.kingshot_admin_upsert_announcement/.test(read("supabase/migrations/20260930162000_lock_admin_security_definer_rpcs.sql")));
