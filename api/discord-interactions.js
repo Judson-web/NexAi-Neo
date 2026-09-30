@@ -3,8 +3,6 @@ import crypto from"node:crypto";
 const DISCORD_API="https://discord.com/api/v10";
 const PUBLIC_KEY=process.env.DISCORD_PUBLIC_KEY||process.env.DISCORD_APPLICATION_PUBLIC_KEY||"";
 const BOT_TOKEN=process.env.DISCORD_BOT_TOKEN||"";
-const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
-const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4TYTujQh8w5NyAJA_3H2K5CEg";
 
 function getRawBody(req){
  return new Promise((resolve,reject)=>{
