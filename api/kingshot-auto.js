@@ -170,7 +170,8 @@ function mergeCodes(sources){
 }
 
 const HANDLED_STATUSES=new Set(["SUCCESS","RECEIVED","SAME TYPE EXCHANGE","TIME_ERROR","CDK_NOT_FOUND","USAGE_LIMIT"]);
-const PLAYER_CONCURRENCY=8;
+const WORKER_COUNT=3;
+const PLAYER_CONCURRENCY=6;
 const UPSTREAM_RETRYABLE=/timeout|timed out|abort|429|rate limit|too many requests|502|503|504/i;
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const KINGDOM_RESET_HOUR=5;
@@ -386,10 +387,104 @@ async function runWithConcurrency(players,fn,limit){
  return results;
 }
 
+function workerBucket(value){
+ const input=String(value||"");
+ let hash=2166136261;
+ for(let i=0;i<input.length;i++){
+  hash^=input.charCodeAt(i);
+  hash=Math.imul(hash,16777619);
+ }
+ return (hash>>>0)%WORKER_COUNT;
+}
+
+function summarizeWorkerResults(results){
+ const redemptionDiagnostics=results.reduce((map,r)=>{
+  if(!r?.redemptionStatus)return map;
+  const status=String(r.redemptionStatus).toUpperCase();
+  if(status==="SUCCESS"||status==="RECEIVED"||status==="SAME TYPE EXCHANGE")return map;
+  const category=String(r.redemptionErrorCategory||"UNKNOWN");
+  const errCode=r.redemptionErrCode==null?"none":String(r.redemptionErrCode);
+  const key=category+" / "+errCode+" / "+status;
+  const existing=map[key]||{count:0,category,errCode,status,message:r.redemptionMessage||null};
+  existing.count++;
+  if(!existing.message&&r.redemptionMessage)existing.message=r.redemptionMessage;
+  map[key]=existing;
+  return map;
+ },{});
+ const topRedemptionFailures=Object.values(redemptionDiagnostics).sort((x,y)=>y.count-x.count).slice(0,8);
+ return {
+  attempted:results.reduce((n,r)=>n+(r?.attempted||0),0),
+  success:results.reduce((n,r)=>n+(r?.success||0),0),
+  alreadyHandled:results.reduce((n,r)=>n+(r?.alreadyHandled||0),0),
+  skipped:results.reduce((n,r)=>n+(r?.skipped||0),0),
+  errors:results.reduce((n,r)=>n+(r?.error?1:0),0),
+  stale:results.reduce((n,r)=>n+(r?.stale?1:0),0),
+  redemptionFailures:topRedemptionFailures
+ };
+}
+
+async function runWorkerShard(slot,codes,players){
+ const claim=await rpc("claim_kingshot_worker_slot",{p_slot:slot});
+ if(!claim?.claimed){
+  return {slot,claimed:false,skipped:true,reason:claim?.reason||"SLOT_ALREADY_RUNNING"};
+ }
+ const workerToken=claim.token;
+ try{
+  const assigned=(Array.isArray(players)?players:[]).filter(player=>workerBucket(player?.player_id)===slot);
+  const results=await runWithConcurrency(assigned,p=>redeemForPlayer(p,codes),PLAYER_CONCURRENCY);
+  const totals=summarizeWorkerResults(results);
+  const summary={slot,players:assigned.length,...totals};
+  await rpc("finish_kingshot_worker_slot",{
+   p_slot:slot,
+   p_token:workerToken,
+   p_status:totals.errors||totals.stale?"COMPLETED_WITH_WARNINGS":"COMPLETED",
+   p_error:null,
+   p_summary:summary
+  }).catch(error=>console.error("Worker slot state update failed:",slot,error?.message||error));
+  console.log("Kingshot worker shard:",summary);
+  return {claimed:true,...summary};
+ }catch(error){
+  await rpc("finish_kingshot_worker_slot",{
+   p_slot:slot,
+   p_token:workerToken,
+   p_status:"FAILED",
+   p_error:error?.message||"Worker shard failed.",
+   p_summary:{slot,errorCategory:classifyError(error)}
+  }).catch(releaseError=>console.error("Worker slot failure state update failed:",slot,releaseError?.message||releaseError));
+  throw error;
+ }
+}
+
 export default async function handler(req,res){
  if(!["GET","POST"].includes(req.method))return res.status(405).json({error:"Method not allowed"});
  const cronSecret=process.env.CRON_SECRET;
  const schedulerToken=req.headers["x-kingshot-scheduler-token"];
+ const requestUrl=new URL(req.url||"/","https://kingshot-autoredeemer.vercel.app");
+ const mode=requestUrl.searchParams.get("mode");
+ const slot=Number(requestUrl.searchParams.get("slot"));
+
+ if(mode==="worker"){
+  // Child shards are internal-only. They may use the same CRON_SECRET as the
+  // coordinator or the scheduler token that authenticated the parent run.
+  let workerAuthorized=Boolean(cronSecret&&req.headers.authorization==="Bearer "+cronSecret);
+  if(!workerAuthorized&&schedulerToken){
+   try{workerAuthorized=Boolean(await rpc("verify_kingshot_scheduler_token",{p_token:String(schedulerToken)}))}catch{}
+  }
+  if(!workerAuthorized)return res.status(401).json({error:"Unauthorized"});
+  if(!Number.isInteger(slot)||slot<0||slot>=WORKER_COUNT)return res.status(400).json({error:"Invalid worker slot"});
+  let body=req.body;
+  if(typeof body==="string"){try{body=JSON.parse(body)}catch{return res.status(400).json({error:"Invalid worker payload"})}}
+  const codes=Array.isArray(body?.codes)?body.codes:[];
+  const players=Array.isArray(body?.players)?body.players:[];
+  try{
+   const result=await runWorkerShard(slot,codes,players);
+   return res.status(200).json({ok:true,...result});
+  }catch(error){
+   console.error("Kingshot worker shard:",slot,error);
+   return res.status(502).json({error:error?.message||"Worker shard failed.",errorCategory:classifyError(error),slot});
+  }
+ }
+
  let authorized=Boolean(cronSecret&&req.headers.authorization==="Bearer "+cronSecret);
  if(!authorized&&schedulerToken){
   try{authorized=Boolean(await rpc("verify_kingshot_scheduler_token",{p_token:String(schedulerToken)}))}catch{}
@@ -446,28 +541,46 @@ export default async function handler(req,res){
   const players=await rpc("list_kingshot_autoredeem_players",{});
   const list=Array.isArray(players)?players:[];
   console.log("Kingshot auto players:",{count:list.length,players:list.map(x=>x.player_id)});
-  const results=await runWithConcurrency(list,p=>redeemForPlayer(p,activeCodes),PLAYER_CONCURRENCY);
-  const redemptionDiagnostics=results.reduce((map,r)=>{
-   if(!r?.redemptionStatus)return map;
-   const status=String(r.redemptionStatus).toUpperCase();
-   if(status==="SUCCESS"||status==="RECEIVED"||status==="SAME TYPE EXCHANGE")return map;
-   const category=String(r.redemptionErrorCategory||"UNKNOWN");
-   const errCode=r.redemptionErrCode==null?"none":String(r.redemptionErrCode);
-   const key=category+" / "+errCode+" / "+status;
-   const existing=map[key]||{count:0,category,errCode,status,message:r.redemptionMessage||null};
-   existing.count++;
-   if(!existing.message&&r.redemptionMessage)existing.message=r.redemptionMessage;
-   map[key]=existing;
-   return map;
-  },{});
-  const topRedemptionFailures=Object.values(redemptionDiagnostics).sort((x,y)=>y.count-x.count).slice(0,8);
-  console.log("Kingshot auto results:",{attempted:results.reduce((n,r)=>n+(r?.attempted||0),0),success:results.reduce((n,r)=>n+(r?.success||0),0),redemptionFailures:topRedemptionFailures});
-  const totals=results.reduce((a,r)=>{
-   a.attempted+=(r?.attempted||0);a.success+=(r?.success||0);a.alreadyHandled+=(r?.alreadyHandled||0);a.skipped+=(r?.skipped||0);a.errors+=r?.error?1:0;a.stale+=r?.stale?1:0;return a;
+  const workerUrlBase="https://"+(req.headers["x-forwarded-host"]||req.headers.host||"kingshot-autoredeemer.vercel.app")+"/api/kingshot-auto?mode=worker&slot=";
+  const childHeaders={"content-type":"application/json"};
+  if(cronSecret)childHeaders.authorization="Bearer "+cronSecret;
+  else if(schedulerToken)childHeaders["x-kingshot-scheduler-token"]=String(schedulerToken);
+  else throw Error("No internal worker authorization is configured.");
+
+  const assignments=Array.from({length:WORKER_COUNT},()=>[]);
+  for(const player of list)assignments[workerBucket(player?.player_id)].push(player);
+  const workerRuns=await Promise.all(assignments.map(async(assigned,workerIndex)=>{
+   try{
+    const response=await fetch(workerUrlBase+workerIndex,{
+     method:"POST",
+     headers:childHeaders,
+     body:JSON.stringify({codes:activeCodes,players:assigned}),
+     signal:AbortSignal.timeout(120000)
+    });
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok)throw Error(payload?.error||"Worker shard returned HTTP "+response.status);
+    return payload;
+   }catch(error){
+    console.error("Kingshot worker fan-out failed:",workerIndex,error?.message||error);
+    return {slot:workerIndex,claimed:false,error:error?.message||"Worker shard failed.",errorCategory:classifyError(error),players:assigned.length};
+   }
+  }));
+  const workerFailures=workerRuns.filter(result=>result?.error||result?.claimed===false&&result?.reason!=="SLOT_ALREADY_RUNNING");
+  const totals=workerRuns.reduce((a,r)=>{
+   a.attempted+=(r?.attempted||0);a.success+=(r?.success||0);a.alreadyHandled+=(r?.alreadyHandled||0);a.skipped+=(r?.skipped||0);a.errors+=(r?.errors||0)+(r?.error?1:0);a.stale+=(r?.stale||0);return a;
   },{attempted:0,success:0,alreadyHandled:0,skipped:0,errors:0,stale:0});
-  const summary={source:"multi-source",sources:PUBLIC_GIFT_SOURCES.length+2,codes:activeCodes.length,discoveredCodes:codes.length,expiredCodesFiltered:codes.length-activeCodes.length,players:list.length,...totals,redemptionFailures:topRedemptionFailures};
+  const topRedemptionFailures=workerRuns.flatMap(result=>Array.isArray(result?.redemptionFailures)?result.redemptionFailures:[]);
+  const mergedFailures=Object.values(topRedemptionFailures.reduce((map,item)=>{
+   const key=String(item.category)+"/"+String(item.errCode)+"/"+String(item.status);
+   const current=map[key]||{...item,count:0};
+   current.count+=Number(item.count||0);
+   map[key]=current;
+   return map;
+  },{})).sort((x,y)=>y.count-x.count).slice(0,8);
+  console.log("Kingshot auto worker pool:",{workers:WORKER_COUNT,assignments:assignments.map(x=>x.length),workerFailures:workerFailures.length,attempted:totals.attempted,success:totals.success,redemptionFailures:mergedFailures});
+  const summary={source:"multi-source",sources:PUBLIC_GIFT_SOURCES.length+2,workers:WORKER_COUNT,codes:activeCodes.length,discoveredCodes:codes.length,expiredCodesFiltered:codes.length-activeCodes.length,players:list.length,...totals,workerFailures:workerFailures.length,redemptionFailures:mergedFailures};
   await rpc("finish_kingshot_worker_run",{p_token:workerToken,p_status:totals.errors||totals.stale?"COMPLETED_WITH_WARNINGS":"COMPLETED",p_error:null,p_summary:summary}).catch(error=>console.error("Worker state update failed:",error?.message||error));
-  if(totals.attempted||totals.errors||totals.stale||newCodes.length)await sendDiscordEvent({title:"📊 Auto-redeem cycle",description:"Scheduled Kingshot worker completed a cycle with activity.",fields:[{name:"Players",value:String(list.length),inline:true},{name:"Codes",value:String(activeCodes.length),inline:true},{name:"Attempts",value:String(totals.attempted),inline:true},{name:"Successes",value:String(totals.success),inline:true},{name:"Errors",value:String(totals.errors),inline:true},{name:"Stale",value:String(totals.stale),inline:true},{name:"Redemption failures",value:topRedemptionFailures.length?topRedemptionFailures.map(x=>`${x.category}/${x.errCode}/${x.status}: ${x.count}`).join("\n").slice(0,1024):"None",inline:false}],color:totals.errors||totals.stale?0xFEE75C:0x57F287});
+  if(totals.attempted||totals.errors||totals.stale||workerFailures.length||newCodes.length)await sendDiscordEvent({title:"📊 Auto-redeem cycle",description:"Scheduled Kingshot worker pool completed a cycle with activity.",fields:[{name:"Players",value:String(list.length),inline:true},{name:"Workers",value:String(WORKER_COUNT),inline:true},{name:"Codes",value:String(activeCodes.length),inline:true},{name:"Attempts",value:String(totals.attempted),inline:true},{name:"Successes",value:String(totals.success),inline:true},{name:"Errors",value:String(totals.errors),inline:true},{name:"Stale",value:String(totals.stale),inline:true},{name:"Worker failures",value:String(workerFailures.length),inline:true},{name:"Redemption failures",value:mergedFailures.length?mergedFailures.map(x=>`${x.category}/${x.errCode}/${x.status}: ${x.count}`).join("\n").slice(0,1024):"None",inline:false}],color:totals.errors||totals.stale||workerFailures.length?0xFEE75C:0x57F287});
   return res.status(200).json({ok:true,...summary});
  }catch(e){
   console.error("Kingshot auto redeem:",e);
