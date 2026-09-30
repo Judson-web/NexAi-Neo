@@ -13,10 +13,11 @@ export default async function handler(req,res){
   const publicMode=String(req.query?.public||"");
   if(req.method==="GET"&&publicMode==="ad"){
    const site=String(req.query?.site||"all"),placement=String(req.query?.placement||"top");
-   const row=await rpc("kingshot_public_banner_ad",{p_site:site,p_placement:placement});
-   const ad=Array.isArray(row)?row[0]:row;
    let visitor=getVisitorCookie(req);
    if(!visitor){visitor=crypto.randomUUID();res.setHeader("Set-Cookie",`ks_ad_visitor=${encodeURIComponent(visitor)}; Path=/; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax`)}
+   const visitorHash=hash(visitor);
+   const row=await rpc("kingshot_public_banner_ad",{p_site:site,p_placement:placement,p_visitor_hash:visitorHash});
+   const ad=Array.isArray(row)?row[0]:row;
    res.setHeader("Cache-Control","private, no-store");
    return res.status(200).json({ad:ad||null});
   }
