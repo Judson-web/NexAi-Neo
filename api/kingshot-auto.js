@@ -366,8 +366,7 @@ async function redeemForPlayer(player,codes){
  const status=String(d?.status||"ERROR").toUpperCase();
  const message=d?.message||d?.error||"";
  await rpc("record_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code,p_status:status,p_err_code:d?.errCode??null,p_message:(d?.errorCategory?"["+d.errorCategory+"] ":"")+message});
- await sendDiscordEvent({title:(status==="SUCCESS"||status==="RECEIVED"||status==="SAME TYPE EXCHANGE"?"✅":"⚠️")+" Redemption "+status,description:message||"Kingshot redemption request completed.",fields:[{name:"Player ID",value:String(player.player_id),inline:true},{name:"Kingdom",value:String(player.kingdom_id||"Unknown"),inline:true},{name:"Gift code",value:String(item.code),inline:true}],color:(status==="SUCCESS"||status==="RECEIVED"||status==="SAME TYPE EXCHANGE")?0x57F287:0xFEE75C});
- return {attempted:1,success:status==="SUCCESS"?1:0,alreadyHandled:0,skipped:0,redemptionStatus:status};
+ return {attempted:1,success:status==="SUCCESS"?1:0,alreadyHandled:0,skipped:0,redemptionStatus:status,redemptionErrorCategory:d?.errorCategory||null,redemptionErrCode:d?.errCode??null,redemptionMessage:message?String(message).slice(0,240):null};
 }
 
 async function runWithConcurrency(players,fn,limit){
@@ -429,11 +428,25 @@ export default async function handler(req,res){
   const list=Array.isArray(players)?players:[];
   console.log("Kingshot auto players:",{count:list.length,players:list.map(x=>x.player_id)});
   const results=await runWithConcurrency(list,p=>redeemForPlayer(p,codes),PLAYER_CONCURRENCY);
-  console.log("Kingshot auto results:",results);
+  const redemptionDiagnostics=results.reduce((map,r)=>{
+   if(!r?.redemptionStatus)return map;
+   const status=String(r.redemptionStatus).toUpperCase();
+   if(status==="SUCCESS"||status==="RECEIVED"||status==="SAME TYPE EXCHANGE")return map;
+   const category=String(r.redemptionErrorCategory||"UNKNOWN");
+   const errCode=r.redemptionErrCode==null?"none":String(r.redemptionErrCode);
+   const key=category+" / "+errCode+" / "+status;
+   const existing=map[key]||{count:0,category,errCode,status,message:r.redemptionMessage||null};
+   existing.count++;
+   if(!existing.message&&r.redemptionMessage)existing.message=r.redemptionMessage;
+   map[key]=existing;
+   return map;
+  },{});
+  const topRedemptionFailures=Object.values(redemptionDiagnostics).sort((x,y)=>y.count-x.count).slice(0,8);
+  console.log("Kingshot auto results:",{attempted:results.reduce((n,r)=>n+(r?.attempted||0),0),success:results.reduce((n,r)=>n+(r?.success||0),0),redemptionFailures:topRedemptionFailures});
   const totals=results.reduce((a,r)=>{
    a.attempted+=(r?.attempted||0);a.success+=(r?.success||0);a.alreadyHandled+=(r?.alreadyHandled||0);a.skipped+=(r?.skipped||0);a.errors+=r?.error?1:0;a.stale+=r?.stale?1:0;return a;
   },{attempted:0,success:0,alreadyHandled:0,skipped:0,errors:0,stale:0});
-  const summary={source:"multi-source",sources:PUBLIC_GIFT_SOURCES.length+2,codes:codes.length,players:list.length,...totals};
+  const summary={source:"multi-source",sources:PUBLIC_GIFT_SOURCES.length+2,codes:codes.length,players:list.length,...totals,redemptionFailures:topRedemptionFailures};
   await rpc("finish_kingshot_worker_run",{p_token:workerToken,p_status:totals.errors||totals.stale?"COMPLETED_WITH_WARNINGS":"COMPLETED",p_error:null,p_summary:summary}).catch(error=>console.error("Worker state update failed:",error?.message||error));
   if(totals.attempted||totals.errors||totals.stale||newCodes.length)await sendDiscordEvent({title:"📊 Auto-redeem cycle",description:"Scheduled Kingshot worker completed a cycle with activity.",fields:[{name:"Players",value:String(list.length),inline:true},{name:"Codes",value:String(codes.length),inline:true},{name:"Attempts",value:String(totals.attempted),inline:true},{name:"Successes",value:String(totals.success),inline:true},{name:"Errors",value:String(totals.errors),inline:true},{name:"Stale",value:String(totals.stale),inline:true}],color:totals.errors||totals.stale?0xFEE75C:0x57F287});
   return res.status(200).json({ok:true,...summary});
