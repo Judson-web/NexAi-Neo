@@ -288,7 +288,7 @@ async function ensureCurrentKingdom(player){
   throw error;
  }
 }
-async async function updateScraperHealth(source,codeCount,error=null){
+async function updateScraperHealth(source,codeCount,error=null){
  try{
   // Keep scraper health/history in Supabase, but do not spam Discord with
   // per-source zero-code alerts. The primary API/page and merged feed remain
