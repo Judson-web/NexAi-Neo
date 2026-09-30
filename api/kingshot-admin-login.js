@@ -1,7 +1,7 @@
 import crypto from"node:crypto";
 import {rateLimit} from"../lib/request-rate-limit.js";
 const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
-const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4TYTujQh8w5NyAJA_3H2K5CEg";
+const SUPABASE_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY;
 const COOKIE="ks_admin_session";
 function hash(value){return crypto.createHash("sha256").update(String(value)).digest("hex")}
 function token(){return crypto.randomBytes(32).toString("hex")}
@@ -16,7 +16,7 @@ export default async function handler(req,res){
   const body=req.body||{},email=String(body.email||"").trim().toLowerCase(),password=String(body.password||"");
   if(!email||!password)return res.status(400).json({error:"Email and password are required."});
   const session=token();
-  const ok=await rpc("kingshot_admin_create_session",{p_email:email,p_password_hash:hash(password),p_token_hash:hash(session)});
+  const ok=await rpc("kingshot_admin_create_session",{p_email:email,p_password:password,p_token_hash:hash(session)});
   if(!ok)return res.status(401).json({error:"Invalid admin credentials."});
   setCookie(res,session,43200);
   return res.status(200).json({ok:true});
