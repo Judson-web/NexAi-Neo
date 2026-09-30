@@ -3,7 +3,9 @@ import {rateLimit} from"../lib/request-rate-limit.js";
 const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
 const SUPABASE_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY;
 
-if(!SUPABASE_KEY)throw Error("Supabase service key is not configured on the server.");\n\nasync function rpc(name,body){
+if(!SUPABASE_KEY)throw Error("Supabase service key is not configured on the server.");
+
+async function rpc(name,body){
  const r=await fetch(SUPABASE_URL+"/rest/v1/rpc/"+name,{method:"POST",headers:{apikey:SUPABASE_KEY,authorization:"Bearer "+SUPABASE_KEY,"content-type":"application/json"},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
  const d=await r.json().catch(()=>null);
  if(!r.ok)throw Error(d?.message||"Supabase request failed.");
