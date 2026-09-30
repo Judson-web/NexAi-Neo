@@ -3,6 +3,8 @@ import {redeemKingshot} from"../lib/kingshot-redeem.js";
 const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
 const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4TYTujQh8w5NyAJA_3H2K5CEg";
 const GIFT_SOURCE_URL="https://kingshot.net/api/gift-codes";
+// Verified long-running fallback for codes that have been omitted from the upstream API feed.
+// Revalidated against public Kingshot code listings; the redemption endpoint remains the final authority.
 const VERIFIED_FALLBACK_CODES=[{code:"VIP777",expiresAt:Date.parse("2026-12-31T23:59:59Z"),createdAt:Date.parse("2026-08-03T00:00:00Z")}];
 
 async function rpc(name,body){
@@ -13,29 +15,357 @@ async function rpc(name,body){
 }
 
 const KNOWN_MIXED_CASE_CODES=new Set(["Kingshot888"]);
-function isLikelyGiftCode(value){const code=String(value||"").trim();if(!code||code.length<6||code.length>32)return false;if(!/^[A-Z0-9]+$/.test(code)&&!KNOWN_MIXED_CASE_CODES.has(code))return false;if(/^u00[0-9a-f]+/i.test(code))return false;const blocked=new Set(["ACTIVE","EXPIRED","CONTINUE","COPYCODE","SIGNINTOREDEEM","SHARELINK","GIFTCODES","REDEEMGIFTCODE","GIFTCODE","LOADING","COMMUNITY","FEATURES","LATEST","CURRENT","POPULAR","PROFILE","PLAYER","KINGDOM","SERVER","MESSAGE","SETTINGS"]);if(blocked.has(code.toUpperCase()))return false;return true;}
-function normalizeCodes(data){const rows=Array.isArray(data?.data?.giftCodes)?data.data.giftCodes:[];const now=Date.now(),seen=new Set();return rows.map(row=>{const code=String(row?.code||"").trim();const expiresAt=row?.expiresAt?Date.parse(row.expiresAt):null;const createdAt=row?.createdAt?Date.parse(row.createdAt):null;if(!isLikelyGiftCode(code)||expiresAt&&!Number.isNaN(expiresAt)&&expiresAt<=now||seen.has(code.toUpperCase()))return null;seen.add(code.toUpperCase());return{code,expiresAt,createdAt};}).filter(Boolean).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));}
-function decodeHtml(value){return String(value||"").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">");}
-function cleanPageLines(html){const text=decodeHtml(String(html||"").replace(/<script[\s\S]*?<\/script>/gi," ").replace(/<style[\s\S]*?<\/style>/gi," ").replace(/<\/(?:p|div|section|article|li|h[1-6]|button|a|br|tr|td|header|footer)>/gi,"\\n").replace(/<[^>]+>/g," "));return text.split(/\r?\n/).map(line=>line.replace(/\s+/g," ").trim()).filter(Boolean);}
-function extractPageCodes(html){const source=String(html||""),seen=new Set(),rows=[];const add=(value,expiresAt=null)=>{const code=decodeHtml(value).trim(),key=code.toUpperCase();if(!isLikelyGiftCode(code)||seen.has(key)||expiresAt&&!Number.isNaN(expiresAt)&&expiresAt<=Date.now())return;seen.add(key);rows.push({code,expiresAt,createdAt:0,source:"page"});};for(const match of source.matchAll(/(?:data-code|data-gift-code|giftCode|gift_code|["']code["'])\\s*[:=]\\s*["']([A-Za-z0-9_-]{4,64})["']/gi))add(match[1]);for(const match of source.matchAll(/\/gift-codes\/redeem\\?code=([A-Za-z0-9_-]{4,64})/gi))add(match[1]);const lines=cleanPageLines(source),start=lines.findIndex(line=>/^Active Gift Codes$/i.test(line)),end=lines.findIndex((line,index)=>index>start&&/^Expired Gift Codes$/i.test(line));if(start>=0){const stop=end>start?end:lines.length;for(let i=start+1;i<stop;i++){if(!/^Active$/i.test(lines[i]))continue;const codeLine=lines[i+1];if(!codeLine)continue;const expiryLine=lines[i+2]||"",expiryMatch=expiryLine.match(/^Expires:\\s*(\\d{1,2}\\/\\d{1,2}\\/\\d{4})$/i),expiresAt=expiryMatch?Date.parse(expiryMatch[1]+" 23:59:59 UTC"):null;add(codeLine,expiresAt);}}return rows;}
-function mergeCodes(apiCodes,pageCodes){const map=new Map();for(const row of[...apiCodes,...pageCodes]){const key=row.code.toUpperCase(),existing=map.get(key);map.set(key,existing?{...existing,expiresAt:existing.expiresAt||row.expiresAt,createdAt:existing.createdAt||row.createdAt,source:existing.source==="api"?"api":"page"}:row);}return[...map.values()].filter(row=>!row.expiresAt||Number.isNaN(row.expiresAt)||row.expiresAt>Date.now()).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));}
+function isLikelyGiftCode(value){
+ const code=String(value||"").trim();
+ if(!code||code.length<6||code.length>32)return false;
+ // Kingshot codes are case-sensitive. Current codes are overwhelmingly
+ // uppercase A-Z/digits; preserve the documented mixed-case legacy code.
+ if(!/^[A-Z0-9]+$/.test(code)&&!KNOWN_MIXED_CASE_CODES.has(code))return false;
+ if(/^u00[0-9a-f]+/i.test(code))return false;
+ // Never accept obvious page/UI prose even if it happens to be uppercase.
+ const blocked=new Set(["ACTIVE","EXPIRED","CONTINUE","COPYCODE","SIGNINTOREDEEM","SHARELINK","GIFTCODES","REDEEMGIFTCODE","GIFTCODE","LOADING","COMMUNITY","FEATURES","LATEST","CURRENT","POPULAR","PROFILE","PLAYER","KINGDOM","SERVER","MESSAGE","SETTINGS"]);
+ if(blocked.has(code.toUpperCase()))return false;
+ return true;
+}
+function normalizeCodes(data){
+ const rows=Array.isArray(data?.data?.giftCodes)?data.data.giftCodes:[];
+ const now=Date.now(),seen=new Set();
+ return rows.map(row=>{
+  const code=String(row?.code||"").trim();
+  const expiresAt=row?.expiresAt?Date.parse(row.expiresAt):null;
+  const createdAt=row?.createdAt?Date.parse(row.createdAt):null;
+  if(!isLikelyGiftCode(code))return null;
+  if(expiresAt&&!Number.isNaN(expiresAt)&&expiresAt<=now)return null;
+  if(seen.has(code.toUpperCase()))return null;
+  seen.add(code.toUpperCase());
+  return {code,expiresAt,createdAt};
+ }).filter(Boolean).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+}
 
-const HANDLED_STATUSES=new Set(["SUCCESS","RECEIVED","SAME TYPE EXCHANGE","TIME_ERROR","CDK_NOT_FOUND","USAGE_LIMIT"]);const PLAYER_CONCURRENCY=4;const UPSTREAM_RETRYABLE=/timeout|timed out|abort|429|rate limit|too many requests|502|503|504/i;const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const KINGDOM_RESET_HOUR=5,KINGDOM_RESET_MINUTE=30,DISCORD_WEBHOOK_URL=process.env.DISCORD_KINGSHOT_WEBHOOK_URL||process.env.DISCORD_SCRAPER_WEBHOOK_URL;
-async function heartbeatWorker(token){if(!token)return false;try{return Boolean(await rpc("heartbeat_kingshot_worker_run",{p_token:token}))}catch(error){console.error("Worker heartbeat failed:",error?.message||error);return false;}}
-function startWorkerHeartbeat(token){let stopped=false,running=false;const tick=async()=>{if(stopped||running)return;running=true;try{await heartbeatWorker(token)}finally{running=false;}};const timer=setInterval(tick,60000);return()=>{stopped=true;clearInterval(timer)};}
-async function sendDiscordEvent({title,description,fields=[],color=0x5865F2}){if(!DISCORD_WEBHOOK_URL)return;const payload={username:"Kingshot Auto Redeem",allowed_mentions:{parse:[]},embeds:[{title:String(title||"Kingshot Auto Redeem").slice(0,256),description:description?String(description).slice(0,4096):undefined,color,fields:fields.slice(0,25).map(f=>({name:String(f.name||"Info").slice(0,256),value:String(f.value??"—").slice(0,1024),inline:Boolean(f.inline)})),timestamp:new Date().toISOString(),footer:{text:"Kingshot Redeemer"}}]};for(let attempt=0;attempt<3;attempt++){try{const response=await fetch(DISCORD_WEBHOOK_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload),signal:AbortSignal.timeout(8000)});if(response.ok)return true;const retryAfter=Number(response.headers.get("retry-after")||"0");if((response.status===429||response.status>=500)&&attempt<2){const wait=Math.min(3000,Math.max(500,Number.isFinite(retryAfter)&&retryAfter>0?retryAfter*1000:750*(attempt+1)));await sleep(wait);continue;}console.error("Discord webhook rejected:",response.status,await response.text().catch(()=>""));return false;}catch(error){if(attempt<2){await sleep(750*(attempt+1));continue;}console.error("Discord webhook failed:",error?.message||error);return false;}}return false;}
-function getKingshotResetBoundary(now=Date.now()){const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(now)),values=Object.fromEntries(parts.map(part=>[part.type,part.value])),year=Number(values.year),month=Number(values.month),day=Number(values.day),hour=Number(values.hour),minute=Number(values.minute),afterReset=hour>KINGDOM_RESET_HOUR||(hour===KINGDOM_RESET_HOUR&&minute>=KINGDOM_RESET_MINUTE),dateKey=year+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0");return{dateKey,afterReset};}
-function needsKingdomResetCheck(lastCheckedAt,now=Date.now()){if(!lastCheckedAt)return true;const last=Date.parse(lastCheckedAt);if(Number.isNaN(last))return true;const current=getKingshotResetBoundary(now),previous=getKingshotResetBoundary(last);if(current.dateKey!==previous.dateKey)return current.afterReset;return current.afterReset&&!previous.afterReset;}
-async function fetchCurrentKingshotPlayer(playerId){const key=process.env.MIGHTPULSE_API_KEY||process.env.KSS_API_KEY;if(!key)throw Error("MightPulse API key is not configured on the server.");let lastError=null;for(let attempt=0;attempt<3;attempt++){try{const r=await fetch("https://api.mightpulse.com/v1/players/"+encodeURIComponent(playerId)+"?include=base",{headers:{Authorization:"Bearer "+key},signal:AbortSignal.timeout(15000)}),d=await r.json().catch(()=>({}));if(r.status===404)return{notFound:true};if(!r.ok){const error=Error(d?.message||d?.error||"MightPulse revalidation failed.");error.status=r.status;throw error;}return{player:d.player||d};}catch(error){lastError=error;const status=Number(error?.status||0);if(attempt<2&&(UPSTREAM_RETRYABLE.test(String(error?.message||""))||[429,502,503,504].includes(status))){await sleep(750*(attempt+1));continue;}throw error;}}throw lastError||Error("MightPulse revalidation failed.");}
-async function claimKingdomResetCheck(player){if(!needsKingdomResetCheck(player.last_kingdom_check_at))return false;const result=await rpc("claim_kingshot_kingdom_reset_check",{p_player_id:player.player_id});return Boolean(result?.claimed);}
-async function ensureCurrentKingdom(player){if(!(await claimKingdomResetCheck(player)))return{player,revalidated:false};let claimed=true;try{const fresh=await fetchCurrentKingshotPlayer(player.player_id);if(fresh.notFound){await rpc("mark_kingshot_player_stale",{p_player_id:player.player_id,p_reason:"MIGHTPULSE_PLAYER_NOT_FOUND"});await sendDiscordEvent({title:"⚠️ Player marked stale",description:"MightPulse could not find this registered Kingshot player.",fields:[{name:"Player ID",value:String(player.player_id),inline:true},{name:"Last kingdom",value:String(player.kingdom_id||"Unknown"),inline:true}],color:0xFEE75C});return{stale:true};}const p=fresh.player||{},currentKingdom=String(p.kid??p.kingdom_id??"").replace(/\D/g,"");if(!currentKingdom)throw Error("MightPulse returned no kingdom for this player.");const result=await rpc("record_kingshot_kingdom_revalidation",{p_player_id:player.player_id,p_kingdom_id:currentKingdom,p_player_name:p.nick_name||p.name||p.nickname||null,p_avatar_url:p.avatar_url||p.avatar||p.avatarUrl||null}),updated=result?.player||player;claimed=false;if(result?.kingdom_changed){console.log("Kingshot kingdom changed:",{playerId:player.player_id,from:result.old_kingdom_id,to:result.new_kingdom_id});await sendDiscordEvent({title:"🔄 Kingdom changed",description:"A registered player's current Kingshot kingdom changed.",fields:[{name:"Player ID",value:String(player.player_id),inline:true},{name:"Previous",value:String(result.old_kingdom_id||"Unknown"),inline:true},{name:"Current",value:String(result.new_kingdom_id||currentKingdom),inline:true}],color:0x5865F2});}return{player:updated,revalidated:true,kingdomChanged:Boolean(result?.kingdom_changed)};}catch(error){if(claimed)await rpc("release_kingshot_kingdom_reset_check",{p_player_id:player.player_id}).catch(releaseError=>console.error("Kingdom check claim release failed:",releaseError?.message||releaseError));throw error;}}
-async function updateScraperHealth(source,codeCount,error=null){try{const result=await rpc("record_kingshot_scraper_health",{p_source:source,p_code_count:codeCount,p_error:error}),health=Array.isArray(result)?result[0]:result;if(health?.alert||health?.recovered)await sendDiscordEvent({title:(health.alert?"🚨":"✅")+" Kingshot scraper "+(health.alert?"alert":"recovered"),description:health.alert?source+" returned no usable gift codes for 3 consecutive runs.":source+" is returning gift codes again.",fields:[{name:"Source",value:source,inline:true},{name:"Code count",value:String(codeCount),inline:true}],color:health.alert?0xED4245:0x57F287});}catch(error){console.error("Scraper health update failed:",source,error?.message||error)}}
-function classifyError(error){const m=String(error?.message||error||"").toLowerCase();if(/timeout|timed out|abort/.test(m))return"TIMEOUT";if(/unauthorized|forbidden|401|403/.test(m))return"AUTH";if(/429|rate limit|too frequent/.test(m))return"RATE_LIMIT";if(/404|not found/.test(m))return"NOT_FOUND";if(/parse|json|invalid api response/.test(m))return"PARSE";if(/supabase|database|rpc/.test(m))return"DATABASE";if(/mightpulse|player/.test(m))return"UPSTREAM_PLAYER";if(/kingshot|gift|redemption/.test(m))return"UPSTREAM_REDEMPTION";return"UNKNOWN";}
+function decodeHtml(value){
+ return String(value||"")
+  .replace(/&amp;/gi,"&")
+  .replace(/&quot;/gi,'"')
+  .replace(/&#39;/gi,"'")
+  .replace(/&lt;/gi,"<")
+  .replace(/&gt;/gi,">");
+}
+
+function cleanPageLines(html){
+ const text=decodeHtml(String(html||"")
+  .replace(/<script[\s\S]*?<\/script>/gi," ")
+  .replace(/<style[\s\S]*?<\/style>/gi," ")
+  .replace(/<\/(?:p|div|section|article|li|h[1-6]|button|a|br|tr|td|header|footer)>/gi,"\n")
+  .replace(/<[^>]+>/g," "));
+ return text
+  .split(/\r?\n/)
+  .map(line=>line.replace(/\s+/g," ").trim())
+  .filter(Boolean);
+}
+
+function extractPageCodes(html){
+ const source=String(html||"");
+ const seen=new Set(),rows=[];
+ const add=(value,expiresAt=null)=>{
+  const code=decodeHtml(value).trim();
+  const key=code.toUpperCase();
+  if(!isLikelyGiftCode(code)||seen.has(key))return;
+  if(expiresAt&&!Number.isNaN(expiresAt)&&expiresAt<=Date.now())return;
+  seen.add(key);
+  rows.push({code,expiresAt,createdAt:0,source:"page"});
+ };
+
+ // Handle explicit code attributes/links if the page exposes them.
+ for(const match of source.matchAll(/(?:data-code|data-gift-code|giftCode|gift_code|["']code["'])\s*[:=]\s*["']([A-Za-z0-9_-]{4,64})["']/gi))add(match[1]);
+ for(const match of source.matchAll(/\/gift-codes\/redeem\?code=([A-Za-z0-9_-]{4,64})/gi))add(match[1]);
+
+ // Otherwise parse only the visible Active Gift Codes card sequence.
+ // Each active card is rendered as: Active -> CODE -> optional Expires: DATE.
+ const lines=cleanPageLines(source);
+ const start=lines.findIndex(line=>/^Active Gift Codes$/i.test(line));
+ const end=lines.findIndex((line,index)=>index>start&&/^Expired Gift Codes$/i.test(line));
+ if(start>=0){
+  const stop=end>start?end:lines.length;
+  for(let i=start+1;i<stop;i++){
+   if(!/^Active$/i.test(lines[i]))continue;
+   const codeLine=lines[i+1];
+   if(!codeLine)continue;
+   const expiryLine=lines[i+2]||"";
+   const expiryMatch=expiryLine.match(/^Expires:\s*(\d{1,2}\/\d{1,2}\/\d{4})$/i);
+   const expiresAt=expiryMatch?Date.parse(expiryMatch[1]+" 23:59:59 UTC"):null;
+   add(codeLine,expiresAt);
+  }
+ }
+ return rows;
+}
+function mergeCodes(apiCodes,pageCodes){
+ const map=new Map();
+ for(const row of [...apiCodes,...pageCodes]){
+  const key=row.code.toUpperCase();
+  const existing=map.get(key);
+  map.set(key,existing?{...existing,expiresAt:existing.expiresAt||row.expiresAt,createdAt:existing.createdAt||row.createdAt,source:existing.source==="api"?"api":"page"}:row);
+ }
+ return [...map.values()].filter(row=>!row.expiresAt||Number.isNaN(row.expiresAt)||row.expiresAt>Date.now())
+  .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+}
+
+const HANDLED_STATUSES=new Set(["SUCCESS","RECEIVED","SAME TYPE EXCHANGE","TIME_ERROR","CDK_NOT_FOUND","USAGE_LIMIT"]);
+const PLAYER_CONCURRENCY=8;
+const UPSTREAM_RETRYABLE=/timeout|timed out|abort|429|rate limit|too many requests|502|503|504/i;
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const KINGDOM_RESET_HOUR=5;
+const KINGDOM_RESET_MINUTE=30;
+const DISCORD_WEBHOOK_URL=process.env.DISCORD_KINGSHOT_WEBHOOK_URL||process.env.DISCORD_SCRAPER_WEBHOOK_URL;
+async function sendDiscordEvent({title,description,fields=[],color=0x5865F2}){
+ if(!DISCORD_WEBHOOK_URL)return;
+ const payload={username:"Kingshot Auto Redeem",allowed_mentions:{parse:[]},embeds:[{
+  title:String(title||"Kingshot Auto Redeem").slice(0,256),
+  description:description?String(description).slice(0,4096):undefined,
+  color,
+  fields:fields.slice(0,25).map(f=>({name:String(f.name||"Info").slice(0,256),value:String(f.value??"—").slice(0,1024),inline:Boolean(f.inline)})),
+  timestamp:new Date().toISOString(),
+  footer:{text:"Kingshot Redeemer"}
+ }]};
+ for(let attempt=0;attempt<3;attempt++){
+  try{
+   const response=await fetch(DISCORD_WEBHOOK_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload),signal:AbortSignal.timeout(8000)});
+   if(response.ok)return true;
+   const retryAfter=Number(response.headers.get("retry-after")||"0");
+   if((response.status===429||response.status>=500)&&attempt<2){
+    const wait=Math.min(3000,Math.max(500,Number.isFinite(retryAfter)&&retryAfter>0?retryAfter*1000:750*(attempt+1)));
+    await new Promise(resolve=>setTimeout(resolve,wait));
+    continue;
+   }
+   console.error("Discord webhook rejected:",response.status,await response.text().catch(()=>""));
+   return false;
+  }catch(error){
+   if(attempt<2){
+    await new Promise(resolve=>setTimeout(resolve,750*(attempt+1)));
+    continue;
+   }
+   console.error("Discord webhook failed:",error?.message||error);
+   return false;
+  }
+ }
+ return false;
+}
+
+function getKingshotResetBoundary(now=Date.now()){
+ const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(now));
+ const values=Object.fromEntries(parts.map(part=>[part.type,part.value]));
+ const year=Number(values.year),month=Number(values.month),day=Number(values.day),hour=Number(values.hour),minute=Number(values.minute);
+ const afterReset=hour>KINGDOM_RESET_HOUR||(hour===KINGDOM_RESET_HOUR&&minute>=KINGDOM_RESET_MINUTE);
+ const dateKey=year+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0");
+ return {dateKey,afterReset};
+}
+
+function needsKingdomResetCheck(lastCheckedAt,now=Date.now()){
+ if(!lastCheckedAt)return true;
+ const last=Date.parse(lastCheckedAt);
+ if(Number.isNaN(last))return true;
+ const current=getKingshotResetBoundary(now);
+ const previous=getKingshotResetBoundary(last);
+ if(current.dateKey!==previous.dateKey)return current.afterReset;
+ return current.afterReset&&!previous.afterReset;
+}
+
+async function fetchCurrentKingshotPlayer(playerId){
+ const key=process.env.MIGHTPULSE_API_KEY||process.env.KSS_API_KEY;
+ if(!key)throw Error("MightPulse API key is not configured on the server.");
+ let lastError=null;
+ for(let attempt=0;attempt<3;attempt++){
+  try{
+   const r=await fetch("https://api.mightpulse.com/v1/players/"+encodeURIComponent(playerId)+"?include=base",{
+    headers:{Authorization:"Bearer "+key},
+    signal:AbortSignal.timeout(15000)
+   });
+   const d=await r.json().catch(()=>({}));
+   if(r.status===404)return {notFound:true};
+   if(!r.ok){const error=Error(d?.message||d?.error||"MightPulse revalidation failed.");error.status=r.status;throw error;}
+   return {player:d.player||d};
+  }catch(error){
+   lastError=error;
+   const status=Number(error?.status||0);
+   if(attempt<2&&(UPSTREAM_RETRYABLE.test(String(error?.message||""))||[429,502,503,504].includes(status))){await sleep(750*(attempt+1));continue;}
+   throw error;
+  }
+ }
+ throw lastError||Error("MightPulse revalidation failed.");
+}
+
+async function claimKingdomResetCheck(player){
+ if(!needsKingdomResetCheck(player.last_kingdom_check_at))return false;
+ const result=await rpc("claim_kingshot_kingdom_reset_check",{p_player_id:player.player_id});
+ return Boolean(result?.claimed);
+}
+
+async function ensureCurrentKingdom(player){
+ if(!(await claimKingdomResetCheck(player)))return {player,revalidated:false};
+ let claimed=true;
+ try{
+  const fresh=await fetchCurrentKingshotPlayer(player.player_id);
+  if(fresh.notFound){
+   await rpc("mark_kingshot_player_stale",{p_player_id:player.player_id,p_reason:"MIGHTPULSE_PLAYER_NOT_FOUND"});
+   await sendDiscordEvent({title:"⚠️ Player marked stale",description:"MightPulse could not find this registered Kingshot player.",fields:[{name:"Player ID",value:String(player.player_id),inline:true},{name:"Last kingdom",value:String(player.kingdom_id||"Unknown"),inline:true}],color:0xFEE75C});
+   return {stale:true};
+  }
+  const p=fresh.player||{};
+  const currentKingdom=String(p.kid??p.kingdom_id??"").replace(/\D/g,"");
+  if(!currentKingdom)throw Error("MightPulse returned no kingdom for this player.");
+  const result=await rpc("record_kingshot_kingdom_revalidation",{
+   p_player_id:player.player_id,
+   p_kingdom_id:currentKingdom,
+   p_player_name:p.nick_name||p.name||p.nickname||null,
+   p_avatar_url:p.avatar_url||p.avatar||p.avatarUrl||null
+  });
+  const updated=result?.player||player;
+  claimed=false;
+  if(result?.kingdom_changed){
+   console.log("Kingshot kingdom changed:",{playerId:player.player_id,from:result.old_kingdom_id,to:result.new_kingdom_id});
+   await sendDiscordEvent({title:"🔄 Kingdom changed",description:"A registered player's current Kingshot kingdom changed.",fields:[{name:"Player ID",value:String(player.player_id),inline:true},{name:"Previous",value:String(result.old_kingdom_id||"Unknown"),inline:true},{name:"Current",value:String(result.new_kingdom_id||currentKingdom),inline:true}],color:0x5865F2});
+  }
+  return {player:updated,revalidated:true,kingdomChanged:Boolean(result?.kingdom_changed)};
+ }catch(error){
+  if(claimed)await rpc("release_kingshot_kingdom_reset_check",{p_player_id:player.player_id}).catch(releaseError=>console.error("Kingdom check claim release failed:",releaseError?.message||releaseError));
+  throw error;
+ }
+}
+async function updateScraperHealth(source,codeCount,error=null){
+ try{
+  const result=await rpc("record_kingshot_scraper_health",{p_source:source,p_code_count:codeCount,p_error:error});
+  const health=Array.isArray(result)?result[0]:result;
+  if(health?.alert||health?.recovered){
+   await sendDiscordEvent({title:(health.alert?"🚨":"✅")+" Kingshot scraper "+(health.alert?"alert":"recovered"),description:health.alert?source+" returned no usable gift codes for 3 consecutive runs.":source+" is returning gift codes again.",fields:[{name:"Source",value:source,inline:true},{name:"Code count",value:String(codeCount),inline:true}],color:health.alert?0xED4245:0x57F287});
+  }
+ }catch(error){console.error("Scraper health update failed:",source,error?.message||error)}
+}
+
+function classifyError(error){const m=String(error?.message||error||"").toLowerCase();if(/timeout|timed out|abort/.test(m))return"TIMEOUT";if(/unauthorized|forbidden|401|403/.test(m))return"AUTH";if(/429|rate limit|too frequent/.test(m))return"RATE_LIMIT";if(/404|not found/.test(m))return"NOT_FOUND";if(/parse|json|invalid api response/.test(m))return"PARSE";if(/supabase|database|rpc/.test(m))return"DATABASE";if(/mightpulse|player/.test(m))return"UPSTREAM_PLAYER";if(/kingshot|gift|redemption/.test(m))return"UPSTREAM_REDEMPTION";return"UNKNOWN"}
 async function recordScraperRun(source,httpStatus,codes,parseOk,error){await rpc("kingshot_record_scraper_run",{p_source:source,p_http_status:httpStatus,p_code_count:Array.isArray(codes)?codes.length:0,p_codes:Array.isArray(codes)?codes.map(x=>x.code):[],p_parse_ok:Boolean(parseOk),p_error_category:error?classifyError(error):null,p_error_message:error?.message||error||null}).catch(()=>{});}
-async function fetchSource(url,kind){const source=kind==="api"?"kingshot-api":"kingshot-page";let lastError=null;for(let attempt=0;attempt<3;attempt++){try{const response=await fetch(url,{headers:kind==="api"?{"accept":"application/json","user-agent":"Nex-Kingshot-Redeemer/1.0"}:{"accept":"text/html","user-agent":"Nex-Kingshot-Redeemer/1.0"},signal:AbortSignal.timeout(15000)}),body=await response.text();if(!response.ok){const error=Error("HTTP "+response.status);error.status=response.status;const retryAfter=Number(response.headers.get("retry-after")||"0");if(attempt<2&&UPSTREAM_RETRYABLE.test("HTTP "+response.status)){await sleep(Math.min(5000,Math.max(750,retryAfter*1000||750*(attempt+1))));continue;}lastError=error;break;}if(kind==="api"){let data=null;try{data=JSON.parse(body)}catch{}const parseOk=data?.status==="success";const codes=parseOk?normalizeCodes(data):[];const parseError=parseOk?null:Error("Invalid API response");await updateScraperHealth(source,codes.length,parseError?.message||null);await recordScraperRun(source,response.status,codes,parseOk,parseError);return{data,codes,failed:false};}const codes=extractPageCodes(body);await updateScraperHealth(source,codes.length,null);await recordScraperRun(source,response.status,codes,true,null);return{html:body,codes,failed:false};}catch(error){lastError=error;if(attempt<2&&UPSTREAM_RETRYABLE.test(String(error?.message||""))){await sleep(750*(attempt+1));continue;}break;}}const message=lastError?.message||"Source request failed";await updateScraperHealth(source,0,message);await recordScraperRun(source,lastError?.status||null,[],false,lastError||Error(message));return kind==="api"?{data:null,codes:[],failed:true,error:lastError}:{html:"",codes:[],failed:true,error:lastError};}
-function isTransientRedemptionResult(result){return Boolean(result&&((result.httpStatus>=500&&result.httpStatus<600)||["TIMEOUT","RATE_LIMIT","UPSTREAM_UNAVAILABLE"].includes(result.errorCategory)));}
-async function redeemWithRetry(args){let result=null;for(let attempt=0;attempt<3;attempt++){result=await redeemKingshot(args);if(!isTransientRedemptionResult(result)||attempt===2)return result;await sleep(1500*(attempt+1));}return result;}
-async function redeemForPlayer(player,codes){const kingdomState=await ensureCurrentKingdom(player);if(kingdomState.stale)return{attempted:0,success:0,alreadyHandled:0,skipped:1,stale:1};if(!kingdomState.player?.kingdom_id)return{attempted:0,success:0,alreadyHandled:0,skipped:1,revalidationError:1};player=kingdomState.player;const history=await rpc("list_kingshot_player_redemptions",{p_player_id:player.player_id});const handled=new Set((Array.isArray(history)?history:[]).filter(row=>HANDLED_STATUSES.has(String(row?.status||"").toUpperCase())).map(row=>String(row?.gift_code||"").toUpperCase()));const item=codes.find(code=>!handled.has(code.code.toUpperCase()));if(!item)return{attempted:0,success:0,alreadyHandled:codes.length,skipped:0};const claimed=await rpc("claim_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code});if(!claimed)return{attempted:0,success:0,alreadyHandled:0,skipped:1};const d=await redeemWithRetry({playerId:player.player_id,code:item.code,kid:player.kingdom_id});const status=String(d?.status||"ERROR").toUpperCase(),message=d?.message||d?.error||"";await rpc("record_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code,p_status:status,p_err_code:d?.errCode??null,p_message:(d?.errorCategory?"["+d.errorCategory+"] ":"")+message});await sendDiscordEvent({title:(status==="SUCCESS"||status==="RECEIVED"||status==="SAME TYPE EXCHANGE"?"✅":"⚠️")+" Redemption "+status,description:message||"Kingshot redemption request completed.",fields:[{name:"Player ID",value:String(player.player_id),inline:true},{name:"Kingdom",value:String(player.kingdom_id||"Unknown"),inline:true},{name:"Gift code",value:String(item.code),inline:true}],color:(status==="SUCCESS"||status==="RECEIVED"||status==="SAME TYPE EXCHANGE")?0x57F287:0xFEE75C});return{attempted:1,success:status==="SUCCESS"?1:0,alreadyHandled:0,skipped:0,redemptionStatus:status};}
-async function runWithConcurrency(players,fn,limit){const results=new Array(players.length);let next=0;async function worker(){while(true){const i=next++;if(i>=players.length)return;try{results[i]=await fn(players[i])}catch(error){results[i]={error:error?.message||"Player processing failed",errorCategory:classifyError(error)}}}}await Promise.all(Array.from({length:Math.min(limit,players.length)},worker));return results;}
-export default async function handler(req,res){if(!["GET","POST"].includes(req.method))return res.status(405).json({error:"Method not allowed"});const cronSecret=process.env.CRON_SECRET,schedulerToken=req.headers["x-kingshot-scheduler-token"];let authorized=Boolean(cronSecret&&req.headers.authorization==="Bearer "+cronSecret);if(!authorized&&schedulerToken){try{authorized=Boolean(await rpc("verify_kingshot_scheduler_token",{p_token:String(schedulerToken)}))}catch{}}if(!authorized)return res.status(401).json({error:"Unauthorized"});let workerToken=null,stopHeartbeat=null;try{const lock=await rpc("claim_kingshot_worker_run",{});if(!lock?.claimed)return res.status(200).json({ok:true,skipped:true,reason:"WORKER_ALREADY_RUNNING"});workerToken=lock.token;await heartbeatWorker(workerToken);stopHeartbeat=startWorkerHeartbeat(workerToken);const [apiSource,pageSource,adminRows]=await Promise.all([fetchSource(GIFT_SOURCE_URL,"api"),fetchSource("https://kingshot.net/gift-codes","page"),rpc("list_kingshot_admin_gift_codes",{})]);const data=apiSource.data,apiCodes=apiSource.codes,pageHtml=pageSource.html,pageCodes=pageSource.codes;const adminCodes=(Array.isArray(adminRows)?adminRows:[]).filter(row=>row?.active!==false).map(row=>({code:String(row?.code||"").trim(),expiresAt:null,createdAt:row?.source_date?Date.parse(String(row.source_date)):Date.parse(String(row?.first_seen_at||"")),source:"admin"})).filter(row=>isLikelyGiftCode(row.code));const codes=mergeCodes(apiCodes,[...pageCodes,...VERIFIED_FALLBACK_CODES,...adminCodes]);if(!codes.length)throw Error("Kingshot gift-code sources returned no active codes.");console.log("Kingshot auto feed:",{apiActive:data?.data?.activeCount??null,apiCodes:apiCodes.map(x=>x.code),pageCodes:pageCodes.map(x=>x.code),adminCodes:adminCodes.map(x=>x.code),merged:codes.map(x=>x.code)});const knownCodes=new Set((Array.isArray(adminRows)?adminRows:[]).map(row=>String(row?.code||"").toUpperCase()));const newCodes=codes.filter(item=>!knownCodes.has(String(item.code).toUpperCase()));for(const item of newCodes)await sendDiscordEvent({title:"🎁 New Kingshot gift code",description:"A new active gift code was discovered by the scraper.",fields:[{name:"Gift code",value:String(item.code),inline:true},{name:"Source",value:String(item.source||"merged"),inline:true},{name:"Expires",value:item.expiresAt&&!Number.isNaN(item.expiresAt)?new Date(item.expiresAt).toISOString():"Not specified",inline:true}]});await Promise.all(codes.map(item=>rpc("upsert_kingshot_gift_code",{p_code:item.code,p_source_date:item.createdAt&&!Number.isNaN(item.createdAt)?new Date(item.createdAt).toISOString().slice(0,10):null})));const players=await rpc("list_kingshot_autoredeem_players",{}),list=Array.isArray(players)?players:[];console.log("Kingshot auto players:",{count:list.length,players:list.map(x=>x.player_id)});let processedPlayers=0;const results=await runWithConcurrency(list,async p=>{const index=processedPlayers++;if(index%8===0)await heartbeatWorker(workerToken);return redeemForPlayer(p,codes);},PLAYER_CONCURRENCY);console.log("Kingshot auto results:",results);await heartbeatWorker(workerToken);const totals=results.reduce((a,r)=>{a.attempted+=(r?.attempted||0);a.success+=(r?.success||0);a.alreadyHandled+=(r?.alreadyHandled||0);a.skipped+=(r?.skipped||0);a.errors+=r?.error?1:0;a.stale+=r?.stale?1:0;return a;},{attempted:0,success:0,alreadyHandled:0,skipped:0,errors:0,stale:0});const summary={source:"kingshot.net",codes:codes.length,players:list.length,...totals};await rpc("finish_kingshot_worker_run",{p_token:workerToken,p_status:totals.errors||totals.stale?"COMPLETED_WITH_WARNINGS":"COMPLETED",p_error:null,p_summary:summary}).catch(error=>console.error("Worker state update failed:",error?.message||error));if(stopHeartbeat)stopHeartbeat();if(totals.attempted||totals.errors||totals.stale||newCodes.length)await sendDiscordEvent({title:"📊 Auto-redeem cycle",description:"Scheduled Kingshot worker completed a cycle with activity.",fields:[{name:"Players",value:String(list.length),inline:true},{name:"Codes",value:String(codes.length),inline:true},{name:"Attempts",value:String(totals.attempted),inline:true},{name:"Successes",value:String(totals.success),inline:true},{name:"Errors",value:String(totals.errors),inline:true},{name:"Stale",value:String(totals.stale),inline:true}],color:totals.errors||totals.stale?0xFEE75C:0x57F287});return res.status(200).json({ok:true,...summary});}catch(e){console.error("Kingshot auto redeem:",e);if(stopHeartbeat)stopHeartbeat();if(workerToken)await rpc("finish_kingshot_worker_run",{p_token:workerToken,p_status:"FAILED",p_error:e?.message||"Auto redemption failed.",p_summary:{errorCategory:classifyError(e)}}).catch(error=>console.error("Worker failure state update failed:",error?.message||error));await sendDiscordEvent({title:"❌ Auto-redeem worker error",description:e?.message||"Auto redemption failed.",color:0xED4245});return res.status(502).json({error:e.message||"Auto redemption failed.",errorCategory:classifyError(e)});}}
+
+async function fetchSource(url,kind){
+ try{
+  const response=await fetch(url,{headers:kind==="api"?{"accept":"application/json","user-agent":"Nex-Kingshot-Redeemer/1.0"}:{"accept":"text/html","user-agent":"Nex-Kingshot-Redeemer/1.0"},signal:AbortSignal.timeout(15000)});
+  const body=await response.text();
+  if(!response.ok){const error=Error("HTTP "+response.status);await recordScraperRun(kind==="api"?"kingshot-api":"kingshot-page",response.status,[],false,error);throw error;}
+  if(kind==="api"){
+   let data=null;try{data=JSON.parse(body)}catch{}
+   const codes=data?.status==="success"?normalizeCodes(data):[];
+   const parseError=data?.status==="success"?null:Error("Invalid API response");
+   await updateScraperHealth("kingshot-api",codes.length,parseError?.message||null);
+   await recordScraperRun("kingshot-api",response.status,codes,data?.status==="success",parseError);
+   return {data,codes};
+  }
+  const codes=extractPageCodes(body);
+  await updateScraperHealth("kingshot-page",codes.length,null);
+  await recordScraperRun("kingshot-page",response.status,codes,true,null);
+  return {html:body,codes};
+ }catch(error){
+  await updateScraperHealth(kind==="api"?"kingshot-api":"kingshot-page",0,error?.message||"Source request failed");
+  await recordScraperRun(kind==="api"?"kingshot-api":"kingshot-page",null,[],false,error);
+  return kind==="api"?{data:null,codes:[]}:{html:"",codes:[]};
+ }
+
+}
+
+async function redeemForPlayer(player,codes){
+ const kingdomState=await ensureCurrentKingdom(player);
+ if(kingdomState.stale)return {attempted:0,success:0,alreadyHandled:0,skipped:1,stale:1};
+ if(!kingdomState.player?.kingdom_id)return {attempted:0,success:0,alreadyHandled:0,skipped:1,revalidationError:1};
+ player=kingdomState.player;
+ const history=await rpc("list_kingshot_player_redemptions",{p_player_id:player.player_id});
+ const handled=new Set((Array.isArray(history)?history:[])
+  .filter(row=>HANDLED_STATUSES.has(String(row?.status||"").toUpperCase()))
+  .map(row=>String(row?.gift_code||"").toUpperCase()));
+
+ // Process only the newest outstanding code for each player per run.
+ // This keeps the request comfortably below pg_net's 5s HTTP timeout and
+ // respects Kingshot's per-player TOO FREQUENT rate limit. Older missed
+ // active codes are picked up on subsequent runs.
+ const item=codes.find(code=>!handled.has(code.code.toUpperCase()));
+ if(!item)return {attempted:0,success:0,alreadyHandled:codes.length,skipped:0};
+
+ const claimed=await rpc("claim_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code});
+ if(!claimed)return {attempted:0,success:0,alreadyHandled:0,skipped:1};
+
+ const d=await redeemKingshot({playerId:player.player_id,code:item.code,kid:player.kingdom_id});
+ const status=String(d?.status||"ERROR").toUpperCase();
+ const message=d?.message||d?.error||"";
+ await rpc("record_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code,p_status:status,p_err_code:d?.errCode??null,p_message:(d?.errorCategory?"["+d.errorCategory+"] ":"")+message});
+ await sendDiscordEvent({title:(status==="SUCCESS"||status==="RECEIVED"||status==="SAME TYPE EXCHANGE"?"✅":"⚠️")+" Redemption "+status,description:message||"Kingshot redemption request completed.",fields:[{name:"Player ID",value:String(player.player_id),inline:true},{name:"Kingdom",value:String(player.kingdom_id||"Unknown"),inline:true},{name:"Gift code",value:String(item.code),inline:true}],color:(status==="SUCCESS"||status==="RECEIVED"||status==="SAME TYPE EXCHANGE")?0x57F287:0xFEE75C});
+ return {attempted:1,success:status==="SUCCESS"?1:0,alreadyHandled:0,skipped:0,redemptionStatus:status};
+}
+
+async function runWithConcurrency(players,fn,limit){
+ const results=new Array(players.length);
+ let next=0;
+ async function worker(){
+  while(true){
+   const i=next++;
+   if(i>=players.length)return;
+   try{results[i]=await fn(players[i])}catch(error){results[i]={error:error?.message||"Player processing failed",errorCategory:classifyError(error)}}
+  }
+ }
+ await Promise.all(Array.from({length:Math.min(limit,players.length)},worker));
+ return results;
+}
+
+export default async function handler(req,res){
+ if(!["GET","POST"].includes(req.method))return res.status(405).json({error:"Method not allowed"});
+ const cronSecret=process.env.CRON_SECRET;
+ const schedulerToken=req.headers["x-kingshot-scheduler-token"];
+ let authorized=Boolean(cronSecret&&req.headers.authorization==="Bearer "+cronSecret);
+ if(!authorized&&schedulerToken){
+  try{authorized=Boolean(await rpc("verify_kingshot_scheduler_token",{p_token:String(schedulerToken)}))}catch{}
+ }
+ if(!authorized)return res.status(401).json({error:"Unauthorized"});
+
+ let workerToken=null;
+ try{
+  const lock=await rpc("claim_kingshot_worker_run",{});
+  if(!lock?.claimed)return res.status(200).json({ok:true,skipped:true,reason:"WORKER_ALREADY_RUNNING"});
+  workerToken=lock.token;
+  const [apiSource,pageSource,adminRows]=await Promise.all([
+   fetchSource(GIFT_SOURCE_URL,"api"),
+   fetchSource("https://kingshot.net/gift-codes","page"),
+   rpc("list_kingshot_admin_gift_codes",{})
+  ]);
+  const data=apiSource.data;
+  const apiCodes=apiSource.codes;
+  const pageHtml=pageSource.html;
+  const pageCodes=pageSource.codes;
+  const adminCodes=(Array.isArray(adminRows)?adminRows:[]).filter(row=>row?.active!==false).map(row=>({
+   code:String(row?.code||"").trim(),
+   expiresAt:null,
+   createdAt:row?.source_date?Date.parse(String(row.source_date)):Date.parse(String(row?.first_seen_at||"")),
+   source:"admin"
+  })).filter(row=>isLikelyGiftCode(row.code));
+  const codes=mergeCodes(apiCodes,[...pageCodes,...VERIFIED_FALLBACK_CODES,...adminCodes]);
+  if(!codes.length)throw Error("Kingshot gift-code sources returned no active codes.");
+  console.log("Kingshot auto feed:",{apiActive:data?.data?.activeCount??null,apiCodes:apiCodes.map(x=>x.code),pageCodes:pageCodes.map(x=>x.code),adminCodes:adminCodes.map(x=>x.code),merged:codes.map(x=>x.code)});
+  const knownCodes=new Set((Array.isArray(adminRows)?adminRows:[]).map(row=>String(row?.code||"").toUpperCase()));
+  const newCodes=codes.filter(item=>!knownCodes.has(String(item.code).toUpperCase()));
+  for(const item of newCodes)await sendDiscordEvent({title:"🎁 New Kingshot gift code",description:"A new active gift code was discovered by the scraper.",fields:[{name:"Gift code",value:String(item.code),inline:true},{name:"Source",value:String(item.source||"merged"),inline:true},{name:"Expires",value:item.expiresAt&&!Number.isNaN(item.expiresAt)?new Date(item.expiresAt).toISOString():"Not specified",inline:true}]});
+  await Promise.all(codes.map(item=>rpc("upsert_kingshot_gift_code",{
+   p_code:item.code,
+   p_source_date:item.createdAt&&!Number.isNaN(item.createdAt)?new Date(item.createdAt).toISOString().slice(0,10):null
+  })));
+  const players=await rpc("list_kingshot_autoredeem_players",{});
+  const list=Array.isArray(players)?players:[];
+  console.log("Kingshot auto players:",{count:list.length,players:list.map(x=>x.player_id)});
+  const results=await runWithConcurrency(list,p=>redeemForPlayer(p,codes),PLAYER_CONCURRENCY);
+  console.log("Kingshot auto results:",results);
+  const totals=results.reduce((a,r)=>{
+   a.attempted+=(r?.attempted||0);a.success+=(r?.success||0);a.alreadyHandled+=(r?.alreadyHandled||0);a.skipped+=(r?.skipped||0);a.errors+=r?.error?1:0;a.stale+=r?.stale?1:0;return a;
+  },{attempted:0,success:0,alreadyHandled:0,skipped:0,errors:0,stale:0});
+  const summary={source:"kingshot.net",codes:codes.length,players:list.length,...totals};
+  await rpc("finish_kingshot_worker_run",{p_token:workerToken,p_status:totals.errors||totals.stale?"COMPLETED_WITH_WARNINGS":"COMPLETED",p_error:null,p_summary:summary}).catch(error=>console.error("Worker state update failed:",error?.message||error));
+  if(totals.attempted||totals.errors||totals.stale||newCodes.length)await sendDiscordEvent({title:"📊 Auto-redeem cycle",description:"Scheduled Kingshot worker completed a cycle with activity.",fields:[{name:"Players",value:String(list.length),inline:true},{name:"Codes",value:String(codes.length),inline:true},{name:"Attempts",value:String(totals.attempted),inline:true},{name:"Successes",value:String(totals.success),inline:true},{name:"Errors",value:String(totals.errors),inline:true},{name:"Stale",value:String(totals.stale),inline:true}],color:totals.errors||totals.stale?0xFEE75C:0x57F287});
+  return res.status(200).json({ok:true,...summary});
+ }catch(e){
+  console.error("Kingshot auto redeem:",e);
+  if(workerToken)await rpc("finish_kingshot_worker_run",{p_token:workerToken,p_status:"FAILED",p_error:e?.message||"Auto redemption failed.",p_summary:{errorCategory:classifyError(e)}}).catch(error=>console.error("Worker failure state update failed:",error?.message||error));
+  await sendDiscordEvent({title:"❌ Auto-redeem worker error",description:e?.message||"Auto redemption failed.",color:0xED4245});
+  return res.status(502).json({error:e.message||"Auto redemption failed.",errorCategory:classifyError(e)});
+ }
+}
