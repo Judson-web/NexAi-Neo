@@ -67,5 +67,10 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/kingshot-auto.js": {
+      "maxDuration": 300
+    }
+  }
 }
