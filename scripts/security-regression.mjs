@@ -14,6 +14,20 @@ const register=read("api/kingshot-register.js");
 const support=read("api/kingshot-support.js");
 const adminData=read("api/kingshot-admin-data.js");
 const adminLogin=read("api/kingshot-admin-login.js");
+const health=read("api/kingshot-health.js");
+
+assertCheck("Worker keeps the handled-status terminal set",
+ /HANDLED_STATUSES=new Set\\(\\[.*SUCCESS.*RECEIVED.*SAME TYPE EXCHANGE.*TIME_ERROR.*CDK_NOT_FOUND.*USAGE_LIMIT.*\\]\\)/.test(auto));
+assertCheck("Worker processes only the newest outstanding code per player",
+ /newest outstanding code for each player per run/.test(auto)&&/codes\.find\\(code=>!handled\.has/.test(auto));
+assertCheck("Global expired-code lookup fails open instead of crashing the worker",
+ /list_kingshot_expired_gift_codes.*catch\\(error=>/.test(auto));
+assertCheck("Expired codes are filtered before redemption",
+ /activeCodes=codes\.filter\\(item=>!expiredCodes\.has/.test(auto));
+assertCheck("Worker health endpoint uses a server-only Supabase credential",
+ /SUPABASE_SERVICE_ROLE_KEY\\|\\|process\\.env\\.SUPABASE_SECRET_KEY/.test(health));
+assertCheck("Worker health endpoint rejects stale worker state",
+ /ageMs<=12\\*60\\*1000/.test(health)&&/status===\"COMPLETED\"\\|\\|state\.last_status===\"RUNNING\"/.test(health));
 
 assertCheck("Worker uses server-only Supabase credential",
  /SUPABASE_SERVICE_ROLE_KEY\|\|process\.env\.SUPABASE_SECRET_KEY/.test(auto));
