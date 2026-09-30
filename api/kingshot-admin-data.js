@@ -1,6 +1,6 @@
 import crypto from"node:crypto";
 const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
-const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4TYTujQh8w5NyAJA_3H2K5CEg";
+const SUPABASE_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY;
 const COOKIE="ks_admin_session";
 function hash(value){return crypto.createHash("sha256").update(String(value)).digest("hex")}
 function getCookie(req){const raw=String(req.headers.cookie||"");const part=raw.split(";").map(x=>x.trim()).find(x=>x.startsWith(COOKIE+"="));return part?decodeURIComponent(part.slice(COOKIE.length+1)):""}
@@ -49,7 +49,7 @@ export default async function handler(req,res){
     const description=clean(body.description,"Kingshot Auto Redeem webhook is connected successfully.",1024);
     const status=clean(body.status,"Connected",1024);
     const triggeredBy=clean(body.triggeredBy,"Admin panel",1024);
-    const footer=clean(body.footer,"Kingshot Redeemer",2048);
+    const footer=clean(body.footer,"Kingshot Auto Redeem",2048);
     const now=new Date();
     const payload={username:"Kingshot Auto Redeem",embeds:[{title,description,color:0x5865F2,fields:[{name:"Status",value:status,inline:true},{name:"Triggered by",value:triggeredBy,inline:true}],timestamp:now.toISOString(),footer:{text:footer}}]};
     const started=Date.now();
