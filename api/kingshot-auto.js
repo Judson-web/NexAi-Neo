@@ -121,10 +121,10 @@ function extractPublicSourceCodes(html,sourceName){
  // Some publishers render the code list inside structured data or code-copy
  // attributes instead of visible heading/row text. Prefer those explicit
  // signals before falling back to the visible section parser.
- for(const match of String(html||"").matchAll(/(?:data-(?:gift-)?code|(?:gift_?code|code))\\s*[:=]\\s*["']([A-Za-z0-9_-]{6,32})["']/gi)){
+ for(const match of String(html||"").matchAll(/(?:data-(?:gift-)?code|(?:gift_?code|code))\s*[:=]\s*["']([A-Za-z0-9_-]{6,32})["']/gi)){
   add(match[1]);
  }
- for(const match of String(html||"").matchAll(/(?:copy|redeem)[^<>]{0,80}\\b([A-Z][A-Z0-9]{5,31})\\b/gi)){
+ for(const match of String(html||"").matchAll(/(?:copy|redeem)[^<>]{0,80}\b([A-Z][A-Z0-9]{5,31})\b/gi)){
   add(match[1]);
  }
  if(start<0)return rows;
