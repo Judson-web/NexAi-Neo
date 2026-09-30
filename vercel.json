@@ -5,6 +5,10 @@
       "destination": "/auto.html"
     },
     {
+      "source": "/manual",
+      "destination": "/manual.html"
+    },
+    {
       "source": "/redeem",
       "destination": "/redeem.html"
     },
