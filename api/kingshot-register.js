@@ -25,7 +25,7 @@ async function verifyKingdom(playerId){
 
 export default async function handler(req,res){
  if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
- if(!rateLimit(req,res,"register",30,60000))return res.status(429).json({error:"Too many registration requests. Please try again shortly."});
+ if(!rateLimit(req,res,"register",60,60000))return res.status(429).json({error:"Too many registration requests. Please try again shortly."});
  const body=req.body||{};
  const playerId=String(body.playerId??"").replace(/\D/g,"");
  const kingdomId=String(body.kingdomId??"").replace(/\D/g,"");
