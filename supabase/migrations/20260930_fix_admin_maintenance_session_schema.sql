@@ -1,4 +1,8 @@
 -- Optional maintenance end time plus private admin-session validation.
+drop function if exists public.kingshot_public_maintenance();
+drop function if exists public.kingshot_admin_get_maintenance(text);
+drop function if exists public.kingshot_admin_set_maintenance(text,boolean,text);
+
 alter table public.kingshot_site_settings add column if not exists ends_at timestamptz;
 
 -- Keep maintenance administration on the private admin-session schema.
