@@ -25,10 +25,6 @@
       "destination": "/index.html"
     },
     {
-      "source": "/announcements-admin",
-      "destination": "/index.html"
-    },
-    {
       "source": "/api/banner-ads",
       "destination": "/api/kingshot-admin-data?public=ad"
     },
