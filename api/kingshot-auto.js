@@ -116,6 +116,7 @@ const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const KINGDOM_RESET_HOUR=5;
 const KINGDOM_RESET_MINUTE=30;
 const DISCORD_WEBHOOK_URL=process.env.DISCORD_KINGSHOT_WEBHOOK_URL||process.env.DISCORD_SCRAPER_WEBHOOK_URL;
+const WORKER_HEARTBEAT_MS=5*60*1000;
 async function sendDiscordEvent({title,description,fields=[],color=0x5865F2}){
  if(!DISCORD_WEBHOOK_URL)return;
  const payload={username:"Kingshot Auto Redeem",allowed_mentions:{parse:[]},embeds:[{
@@ -321,10 +322,13 @@ export default async function handler(req,res){
  if(!authorized)return res.status(401).json({error:"Unauthorized"});
 
  let workerToken=null;
+ let heartbeatTimer=null;
  try{
   const lock=await rpc("claim_kingshot_worker_run",{});
   if(!lock?.claimed)return res.status(200).json({ok:true,skipped:true,reason:"WORKER_ALREADY_RUNNING"});
   workerToken=lock.token;
+  const heartbeat=()=>rpc("heartbeat_kingshot_worker_run",{p_token:workerToken}).then(ok=>{if(!ok)console.error("Worker heartbeat rejected: lock token is no longer active.");}).catch(error=>console.error("Worker heartbeat failed:",error?.message||error));
+  heartbeatTimer=setInterval(heartbeat,WORKER_HEARTBEAT_MS);
   const [apiSource,pageSource,adminRows]=await Promise.all([
    fetchSource(GIFT_SOURCE_URL,"api"),
    fetchSource("https://kingshot.net/gift-codes","page"),
@@ -367,5 +371,7 @@ export default async function handler(req,res){
   if(typeof heartbeat!=="undefined")clearInterval(heartbeat);\n  if(workerToken)await rpc("finish_kingshot_worker_run",{p_token:workerToken,p_status:"FAILED",p_error:e?.message||"Auto redemption failed.",p_summary:{errorCategory:classifyError(e)}}).catch(error=>console.error("Worker failure state update failed:",error?.message||error));
   await sendDiscordEvent({title:"❌ Auto-redeem worker error",description:e?.message||"Auto redemption failed.",color:0xED4245});
   return res.status(502).json({error:e.message||"Auto redemption failed.",errorCategory:classifyError(e)});
+ }finally{
+  if(heartbeatTimer)clearInterval(heartbeatTimer);
  }
 }
