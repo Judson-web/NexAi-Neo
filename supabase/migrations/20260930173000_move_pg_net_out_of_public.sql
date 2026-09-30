@@ -2,9 +2,14 @@
 -- The request queue is empty before this migration; extension-owned response
 -- history is ephemeral and can be recreated safely.
 create schema if not exists extensions;
-create schema if not exists net;
 
 drop extension pg_net;
+
+-- Supabase's pg_net grant event trigger currently expects this legacy schema
+-- name while the extension is being created, so keep an empty compatibility
+-- schema during installation. The extension itself lives in extensions.
+create schema if not exists net;
+
 create extension pg_net with schema extensions;
 
 do $$
