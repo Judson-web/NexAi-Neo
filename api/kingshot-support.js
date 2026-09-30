@@ -1,7 +1,10 @@
+import {rateLimit} from"../lib/request-rate-limit.js";
+
 const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
 const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4TYTujQh8w5NyAJA_3H2K5CEg";
 export default async function handler(req,res){
  if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
+ if(!rateLimit(req,res,"support",6,60000))return res.status(429).json({error:"Too many support requests. Please try again shortly."});
  try{
   const body=req.body||{},playerId=String(body.playerId||"").trim(),reason=String(body.reason||"").trim().slice(0,1000);
   if(!/^[0-9]{5,20}$/.test(playerId))return res.status(400).json({error:"Enter a valid Player ID."});
