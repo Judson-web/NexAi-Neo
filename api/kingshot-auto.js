@@ -111,6 +111,8 @@ function mergeCodes(apiCodes,pageCodes){
 
 const HANDLED_STATUSES=new Set(["SUCCESS","RECEIVED","SAME TYPE EXCHANGE","TIME_ERROR","CDK_NOT_FOUND","USAGE_LIMIT"]);
 const PLAYER_CONCURRENCY=8;
+const UPSTREAM_RETRYABLE=/timeout|timed out|abort|429|rate limit|too many requests|502|503|504/i;
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const KINGDOM_RESET_HOUR=5;
 const KINGDOM_RESET_MINUTE=30;
 const DISCORD_WEBHOOK_URL=process.env.DISCORD_KINGSHOT_WEBHOOK_URL||process.env.DISCORD_SCRAPER_WEBHOOK_URL;
@@ -170,14 +172,25 @@ function needsKingdomResetCheck(lastCheckedAt,now=Date.now()){
 async function fetchCurrentKingshotPlayer(playerId){
  const key=process.env.MIGHTPULSE_API_KEY||process.env.KSS_API_KEY;
  if(!key)throw Error("MightPulse API key is not configured on the server.");
- const r=await fetch("https://api.mightpulse.com/v1/players/"+encodeURIComponent(playerId)+"?include=base",{
-  headers:{Authorization:"Bearer "+key},
-  signal:AbortSignal.timeout(15000)
- });
- const d=await r.json().catch(()=>({}));
- if(r.status===404)return {notFound:true};
- if(!r.ok)throw Error(d?.message||d?.error||"MightPulse revalidation failed.");
- return {player:d.player||d};
+ let lastError=null;
+ for(let attempt=0;attempt<3;attempt++){
+  try{
+   const r=await fetch("https://api.mightpulse.com/v1/players/"+encodeURIComponent(playerId)+"?include=base",{
+    headers:{Authorization:"Bearer "+key},
+    signal:AbortSignal.timeout(15000)
+   });
+   const d=await r.json().catch(()=>({}));
+   if(r.status===404)return {notFound:true};
+   if(!r.ok){const error=Error(d?.message||d?.error||"MightPulse revalidation failed.");error.status=r.status;throw error;}
+   return {player:d.player||d};
+  }catch(error){
+   lastError=error;
+   const status=Number(error?.status||0);
+   if(attempt<2&&(UPSTREAM_RETRYABLE.test(String(error?.message||""))||[429,502,503,504].includes(status))){await sleep(750*(attempt+1));continue;}
+   throw error;
+  }
+ }
+ throw lastError||Error("MightPulse revalidation failed.");
 }
 
 async function claimKingdomResetCheck(player){
@@ -304,7 +317,11 @@ export default async function handler(req,res){
  }
  if(!authorized)return res.status(401).json({error:"Unauthorized"});
 
+ let workerToken=null;
  try{
+  const lock=await rpc("claim_kingshot_worker_run",{});
+  if(!lock?.claimed)return res.status(200).json({ok:true,skipped:true,reason:"WORKER_ALREADY_RUNNING"});
+  workerToken=lock.token;
   const [apiSource,pageSource,adminRows]=await Promise.all([
    fetchSource(GIFT_SOURCE_URL,"api"),
    fetchSource("https://kingshot.net/gift-codes","page"),
@@ -338,11 +355,14 @@ export default async function handler(req,res){
   const totals=results.reduce((a,r)=>{
    a.attempted+=(r?.attempted||0);a.success+=(r?.success||0);a.alreadyHandled+=(r?.alreadyHandled||0);a.skipped+=(r?.skipped||0);a.errors+=r?.error?1:0;a.stale+=r?.stale?1:0;return a;
   },{attempted:0,success:0,alreadyHandled:0,skipped:0,errors:0,stale:0});
+  const summary={source:"kingshot.net",codes:codes.length,players:list.length,...totals};
+  await rpc("finish_kingshot_worker_run",{p_token:workerToken,p_status:totals.errors||totals.stale?"COMPLETED_WITH_WARNINGS":"COMPLETED",p_error:null,p_summary:summary}).catch(error=>console.error("Worker state update failed:",error?.message||error));
   if(totals.attempted||totals.errors||totals.stale||newCodes.length)await sendDiscordEvent({title:"📊 Auto-redeem cycle",description:"Scheduled Kingshot worker completed a cycle with activity.",fields:[{name:"Players",value:String(list.length),inline:true},{name:"Codes",value:String(codes.length),inline:true},{name:"Attempts",value:String(totals.attempted),inline:true},{name:"Successes",value:String(totals.success),inline:true},{name:"Errors",value:String(totals.errors),inline:true},{name:"Stale",value:String(totals.stale),inline:true}],color:totals.errors||totals.stale?0xFEE75C:0x57F287});
-  return res.status(200).json({ok:true,source:"kingshot.net",codes:codes.length,players:list.length,...totals});
+  return res.status(200).json({ok:true,...summary});
  }catch(e){
   console.error("Kingshot auto redeem:",e);
+  if(workerToken)await rpc("finish_kingshot_worker_run",{p_token:workerToken,p_status:"FAILED",p_error:e?.message||"Auto redemption failed.",p_summary:{errorCategory:classifyError(e)}}).catch(error=>console.error("Worker failure state update failed:",error?.message||error));
   await sendDiscordEvent({title:"❌ Auto-redeem worker error",description:e?.message||"Auto redemption failed.",color:0xED4245});
-  return res.status(502).json({error:e.message||"Auto redemption failed."});
+  return res.status(502).json({error:e.message||"Auto redemption failed.",errorCategory:classifyError(e)});
  }
 }
