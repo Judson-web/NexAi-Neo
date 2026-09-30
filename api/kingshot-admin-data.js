@@ -49,7 +49,7 @@ export default async function handler(req,res){
     const description=clean(body.description,"Kingshot Auto Redeem webhook is connected successfully.",1024);
     const status=clean(body.status,"Connected",1024);
     const triggeredBy=clean(body.triggeredBy,"Admin panel",1024);
-    const footer=clean(body.footer,"Kingshot Auto Redeem",2048);
+    const footer=clean(body.footer,"Kingshot Redeemer",2048);
     const now=new Date();
     const payload={username:"Kingshot Auto Redeem",embeds:[{title,description,color:0x5865F2,fields:[{name:"Status",value:status,inline:true},{name:"Triggered by",value:triggeredBy,inline:true}],timestamp:now.toISOString(),footer:{text:footer}}]};
     const started=Date.now();
