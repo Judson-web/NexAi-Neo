@@ -16,3 +16,6 @@ Set `DISCORD_BOT_TOKEN` in the Vercel Production environment. The token is only 
 npm install
 npm run dev
 ```
+
+## Kingshot security
+Privileged Kingshot worker and admin RPCs use a server-only Supabase credential; public clients do not receive execute access.
