@@ -21,7 +21,7 @@ export default async function handler(req,res){
    res.setHeader("Cache-Control","private, no-store");
    return res.status(200).json({ad:ad||null});
   }
-  if(req.method==="GET"&&publicMode==="maintenance"){ const row=await rpc("kingshot_public_maintenance",{}); const state=Array.isArray(row)?row[0]:row; res.setHeader("Cache-Control","no-store"); return res.status(200).json({maintenanceEnabled:Boolean(state?.maintenance_enabled),message:String(state?.maintenance_message||"We are performing maintenance right now. Please check back shortly."),updatedAt:state?.updated_at||null}); }
+  if(req.method==="GET"&&publicMode==="maintenance"){ const row=await rpc("kingshot_public_maintenance",{}); const state=Array.isArray(row)?row[0]:row; res.setHeader("Cache-Control","no-store"); return res.status(200).json({maintenanceEnabled:Boolean(state?.maintenance_enabled),message:String(state?.maintenance_message||"We are performing maintenance right now. Please check back shortly."),endsAt:state?.ends_at||null,updatedAt:state?.updated_at||null}); }
   if(req.method==="GET"&&publicMode==="click"){
    const id=String(req.query?.id||"");
    if(!/^[0-9a-f-]{36}$/.test(id))return res.status(400).json({error:"Invalid advertisement."});
@@ -38,7 +38,7 @@ export default async function handler(req,res){
   const valid=await rpc("kingshot_admin_validate_session",{p_token_hash:tokenHash});if(!valid)return res.status(401).json({error:"Unauthorized"});
   if(req.method==="POST"){
    const body=req.body||{};
-   if(String(body.action||"").toUpperCase()==="SET_MAINTENANCE"){ const enabled=Boolean(body.enabled); const message=String(body.message||"").trim().slice(0,500); const row=await rpc("kingshot_admin_set_maintenance",{p_token_hash:tokenHash,p_enabled:enabled,p_message:message}); const state=Array.isArray(row)?row[0]:row; await audit(enabled?"ENABLE_MAINTENANCE":"DISABLE_MAINTENANCE","site_settings","maintenance",{enabled,message:state?.maintenance_message||message}); return res.status(200).json({ok:true,maintenanceEnabled:Boolean(state?.maintenance_enabled),message:String(state?.maintenance_message||message)}); }
+   if(String(body.action||"").toUpperCase()==="SET_MAINTENANCE"){ const enabled=Boolean(body.enabled); const message=String(body.message||"").trim().slice(0,500); const rawEndsAt=body.endsAt?String(body.endsAt).trim():""; const endsAt=enabled&&rawEndsAt?new Date(rawEndsAt):null; if(enabled&&rawEndsAt&&Number.isNaN(endsAt?.getTime()))return res.status(400).json({error:"Invalid maintenance end time."}); if(enabled&&endsAt&&endsAt.getTime()<=Date.now())return res.status(400).json({error:"Maintenance end time must be in the future."}); const row=await rpc("kingshot_admin_set_maintenance",{p_token_hash:tokenHash,p_enabled:enabled,p_message:message,p_ends_at:endsAt?endsAt.toISOString():null}); const state=Array.isArray(row)?row[0]:row; await audit(enabled?"ENABLE_MAINTENANCE":"DISABLE_MAINTENANCE","site_settings","maintenance",{enabled,message:state?.maintenance_message||message,endsAt:state?.ends_at||null}); return res.status(200).json({ok:true,maintenanceEnabled:Boolean(state?.maintenance_enabled),message:String(state?.maintenance_message||message),endsAt:state?.ends_at||null}); }
    if(String(body.action||"").toUpperCase()==="TEST_WEBHOOK"){
     const webhook=process.env.DISCORD_KINGSHOT_WEBHOOK_URL||process.env.DISCORD_SCRAPER_WEBHOOK_URL;
     if(!webhook)return res.status(503).json({error:"Discord webhook is not configured."});
