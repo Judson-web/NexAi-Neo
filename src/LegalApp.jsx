@@ -25,6 +25,9 @@ export default function LegalApp({type}){
         <div className="legal-tabs"><a className={!privacy?"active":""} href={"/terms?service="+serviceKey}>Terms</a><a className={privacy?"active":""} href={"/privacy?service="+serviceKey}>Privacy</a></div>
       </section>
       <section className="legal-body">
+        <h2>Accessibility</h2>
+        <p>We aim to make this site usable with keyboard navigation, readable text, clear labels, responsive layouts, and reduced-motion preferences where practical. Some features depend on third-party services or browser capabilities and may not provide the same accessibility experience. If you encounter an accessibility barrier, you can contact the site operator with the page and feature involved so it can be reviewed.</p>
+
         <h2>About this service</h2>
         <p>This is an independent community project created and operated by Judson. It is not operated, sponsored, endorsed, or affiliated with Century Games, Kingshot, Discord, or any other platform referenced by the tools.</p>
 
