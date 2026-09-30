@@ -235,14 +235,18 @@ async function fetchSource(url,kind){
   if(kind==="api"){
    let data=null;try{data=JSON.parse(body)}catch{}
    const codes=data?.status==="success"?normalizeCodes(data):[];
-   const parseError=data?.status==="success"?null:Error("Invalid API response");\n   await updateScraperHealth("kingshot-api",codes.length,parseError?.message||null);\n   await recordScraperRun("kingshot-api",response.status,codes,data?.status==="success",parseError);
+   const parseError=data?.status==="success"?null:Error("Invalid API response");
+   await updateScraperHealth("kingshot-api",codes.length,parseError?.message||null);
+   await recordScraperRun("kingshot-api",response.status,codes,data?.status==="success",parseError);
    return {data,codes};
   }
   const codes=extractPageCodes(body);
-  await updateScraperHealth("kingshot-page",codes.length,null);\n  await recordScraperRun("kingshot-page",response.status,codes,true,null);
+  await updateScraperHealth("kingshot-page",codes.length,null);
+  await recordScraperRun("kingshot-page",response.status,codes,true,null);
   return {html:body,codes};
  }catch(error){
-  await updateScraperHealth(kind==="api"?"kingshot-api":"kingshot-page",0,error?.message||"Source request failed");\n  await recordScraperRun(kind==="api"?"kingshot-api":"kingshot-page",null,[],false,error);
+  await updateScraperHealth(kind==="api"?"kingshot-api":"kingshot-page",0,error?.message||"Source request failed");
+  await recordScraperRun(kind==="api"?"kingshot-api":"kingshot-page",null,[],false,error);
   return kind==="api"?{data:null,codes:[]}:{html:"",codes:[]};
  }
 
