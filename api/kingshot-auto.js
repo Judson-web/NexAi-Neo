@@ -14,7 +14,9 @@ const PUBLIC_GIFT_SOURCES=[
 // Revalidated against public Kingshot code listings; the redemption endpoint remains the final authority.
 const VERIFIED_FALLBACK_CODES=[{code:"VIP777",expiresAt:Date.parse("2026-12-31T23:59:59Z"),createdAt:Date.parse("2026-08-03T00:00:00Z")}];
 
-if(!SUPABASE_KEY)throw Error("Supabase service key is not configured on the server.");\n\nasync function rpc(name,body){
+if(!SUPABASE_KEY)throw Error("Supabase service key is not configured on the server.");
+
+async function rpc(name,body){
  const r=await fetch(SUPABASE_URL+"/rest/v1/rpc/"+name,{method:"POST",headers:{"apikey":SUPABASE_KEY,"authorization":"Bearer "+SUPABASE_KEY,"content-type":"application/json"},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
  const d=await r.json().catch(()=>null);
  if(!r.ok)throw Error(d?.message||"Supabase request failed");
