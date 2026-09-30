@@ -1,3 +1,5 @@
+import {rateLimit} from"../lib/request-rate-limit.js";
+
 const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
 const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4TYTujQh8w5NyAJA_3H2K5CEg";
 
@@ -23,6 +25,7 @@ async function verifyKingdom(playerId){
 
 export default async function handler(req,res){
  if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
+ if(!rateLimit(req,res,"register",8,60000))return res.status(429).json({error:"Too many registration requests. Please try again shortly."});
  const body=req.body||{};
  const playerId=String(body.playerId??"").replace(/\D/g,"");
  const kingdomId=String(body.kingdomId??"").replace(/\D/g,"");
