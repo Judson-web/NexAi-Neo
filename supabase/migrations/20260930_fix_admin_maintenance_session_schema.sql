@@ -1,3 +1,6 @@
+-- Optional maintenance end time plus private admin-session validation.
+alter table public.kingshot_site_settings add column if not exists ends_at timestamptz;
+
 -- Keep maintenance administration on the private admin-session schema.
 -- The maintenance admin RPCs must not look for the session table in public.
 create or replace function public.kingshot_public_maintenance()
@@ -60,7 +63,7 @@ begin
   where id=true;
 
   return query
-    select s.maintenance_enabled,s.maintenance_message,s.updated_at
+    select s.maintenance_enabled,s.maintenance_message,s.ends_at,s.updated_at
     from public.kingshot_site_settings s
     where s.id=true
     limit 1;
