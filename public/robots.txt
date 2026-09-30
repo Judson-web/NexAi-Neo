@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /ks-admin
+Disallow: /ad-admin
+
+Sitemap: https://kingshot-autoredeemer.vercel.app/sitemap.xml
