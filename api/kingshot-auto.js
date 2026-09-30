@@ -193,7 +193,7 @@ async function fetchCurrentKingshotPlayer(playerId){
  throw lastError||Error("MightPulse revalidation failed.");
 }
 
-async function claimKingdomResetCheck(player){
+async function heartbeatWorker(token){\n if(!token)return false;\n try{return Boolean(await rpc("heartbeat_kingshot_worker_run",{p_token:token}))}catch(error){console.error("Worker heartbeat failed:",error?.message||error);return false;}\n}\n\nasync function claimKingdomResetCheck(player){
  if(!needsKingdomResetCheck(player.last_kingdom_check_at))return false;
  const result=await rpc("claim_kingshot_kingdom_reset_check",{p_player_id:player.player_id});
  return Boolean(result?.claimed);
@@ -364,7 +364,7 @@ export default async function handler(req,res){
   return res.status(200).json({ok:true,...summary});
  }catch(e){
   console.error("Kingshot auto redeem:",e);
-  if(workerToken)await rpc("finish_kingshot_worker_run",{p_token:workerToken,p_status:"FAILED",p_error:e?.message||"Auto redemption failed.",p_summary:{errorCategory:classifyError(e)}}).catch(error=>console.error("Worker failure state update failed:",error?.message||error));
+  if(typeof heartbeat!=="undefined")clearInterval(heartbeat);\n  if(workerToken)await rpc("finish_kingshot_worker_run",{p_token:workerToken,p_status:"FAILED",p_error:e?.message||"Auto redemption failed.",p_summary:{errorCategory:classifyError(e)}}).catch(error=>console.error("Worker failure state update failed:",error?.message||error));
   await sendDiscordEvent({title:"❌ Auto-redeem worker error",description:e?.message||"Auto redemption failed.",color:0xED4245});
   return res.status(502).json({error:e.message||"Auto redemption failed.",errorCategory:classifyError(e)});
  }
