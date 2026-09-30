@@ -3,6 +3,11 @@ import {redeemKingshot} from"../lib/kingshot-redeem.js";
 const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
 const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4TYTujQh8w5NyAJA_3H2K5CEg";
 const GIFT_SOURCE_URL="https://kingshot.net/api/gift-codes";
+const PUBLIC_GIFT_SOURCES=[
+ {name:"gamesradar",url:"https://www.gamesradar.com/games/strategy/kingshot-codes-gift/"},
+ {name:"kingshot-guides",url:"https://kingshotguides.com/guide/active-giftcodes-and-how-to-redeem/"},
+ {name:"kingshot-world",url:"https://kingshotworld.com/guides/active-giftcodes-and-how-to-redeem/"}
+];
 // Verified long-running fallback for codes that have been omitted from the upstream API feed.
 // Revalidated against public Kingshot code listings; the redemption endpoint remains the final authority.
 const VERIFIED_FALLBACK_CODES=[{code:"VIP777",expiresAt:Date.parse("2026-12-31T23:59:59Z"),createdAt:Date.parse("2026-08-03T00:00:00Z")}];
@@ -98,15 +103,50 @@ function extractPageCodes(html){
  }
  return rows;
 }
-function mergeCodes(apiCodes,pageCodes){
- const map=new Map();
- for(const row of [...apiCodes,...pageCodes]){
-  const key=row.code.toUpperCase();
-  const existing=map.get(key);
-  map.set(key,existing?{...existing,expiresAt:existing.expiresAt||row.expiresAt,createdAt:existing.createdAt||row.createdAt,source:existing.source==="api"?"api":"page"}:row);
+function extractPublicSourceCodes(html,sourceName){
+ const lines=cleanPageLines(html),rows=[],seen=new Set();
+ const add=(value,expiresAt=null)=>{
+  const code=decodeHtml(value).trim(),key=code.toUpperCase();
+  if(!isLikelyGiftCode(code)||seen.has(key))return;
+  if(expiresAt&&!Number.isNaN(expiresAt)&&expiresAt<=Date.now())return;
+  seen.add(key);rows.push({code,expiresAt,createdAt:0,source:sourceName});
+ };
+ const startPatterns=[/^Active Gift Codes:?$/i,/^Active Giftcodes:?$/i,/^All Kingshot codes:?$/i,/^New valid gift codes for Kingshot:?$/i,/^Active Codes:?$/i];
+ const start=lines.findIndex(line=>startPatterns.some(p=>p.test(line)));
+ if(start<0)return rows;
+ const endPatterns=[/^Expired Kingshot codes:?$/i,/^Expired Gift Codes:?$/i,/^Expired Codes:?$/i,/^Unavailable or Archived Codes:?$/i,/^How to Redeem/i];
+ let stop=lines.length;
+ for(let i=start+1;i<lines.length;i++){if(endPatterns.some(p=>p.test(lines[i]))){stop=i;break;}}
+ for(let i=start+1;i<stop;i++){
+  const line=lines[i];
+  const row=line.match(/^(?:[•*]\s*)?([A-Za-z0-9]{6,32})(?:\s+[–—-]\s+|\s+)(.*)$/);
+  if(row&&isLikelyGiftCode(row[1])){
+   const expiry=(row[2]||"").match(/expires?[^0-9]*(\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+\d{4}|[A-Za-z]+\s+\d{1,2},?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{4})/i);
+   add(row[1],expiry?parseExternalExpiry(expiry[1]):null);continue;
+  }
+  const token=line.match(/^([A-Za-z][A-Za-z0-9]{5,31})$/);
+  if(token&&isLikelyGiftCode(token[1])){
+   const next=(lines[i+1]||"")+" "+(lines[i+2]||"");
+   const expiry=next.match(/expires?[^0-9]*(\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+\d{4}|[A-Za-z]+\s+\d{1,2},?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{4})/i);
+   add(token[1],expiry?parseExternalExpiry(expiry[1]):null);
+  }
  }
- return [...map.values()].filter(row=>!row.expiresAt||Number.isNaN(row.expiresAt)||row.expiresAt>Date.now())
-  .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+ return rows;
+}
+function parseExternalExpiry(value){
+ const raw=String(value||"").replace(/(\d)(st|nd|rd|th)\b/gi,"$1").replace(/,/g,"").trim();
+ const parsed=Date.parse(raw+" 23:59:59 UTC");return Number.isNaN(parsed)?null:parsed;
+}
+function mergeCodes(sources){
+ const map=new Map();
+ for(const row of sources.flat()){
+  const key=row.code.toUpperCase(),existing=map.get(key);
+  if(existing){
+   const sourceSet=new Set([...(existing.sources||[existing.source]),row.source]);
+   map.set(key,{...existing,expiresAt:existing.expiresAt||row.expiresAt,createdAt:existing.createdAt||row.createdAt,source:sourceSet.size>1?"multiple":existing.source,sources:[...sourceSet]});
+  }else map.set(key,{...row,sources:[row.source]});
+ }
+ return [...map.values()].filter(row=>!row.expiresAt||Number.isNaN(row.expiresAt)||row.expiresAt>Date.now()).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
 }
 
 const HANDLED_STATUSES=new Set(["SUCCESS","RECEIVED","SAME TYPE EXCHANGE","TIME_ERROR","CDK_NOT_FOUND","USAGE_LIMIT"]);
@@ -244,10 +284,11 @@ function classifyError(error){const m=String(error?.message||error||"").toLowerC
 async function recordScraperRun(source,httpStatus,codes,parseOk,error){await rpc("kingshot_record_scraper_run",{p_source:source,p_http_status:httpStatus,p_code_count:Array.isArray(codes)?codes.length:0,p_codes:Array.isArray(codes)?codes.map(x=>x.code):[],p_parse_ok:Boolean(parseOk),p_error_category:error?classifyError(error):null,p_error_message:error?.message||error||null}).catch(()=>{});}
 
 async function fetchSource(url,kind){
+ const sourceName=kind==="api"?"kingshot-api":kind==="page"?"kingshot-page":kind.slice(7);
  try{
   const response=await fetch(url,{headers:kind==="api"?{"accept":"application/json","user-agent":"Nex-Kingshot-Redeemer/1.0"}:{"accept":"text/html","user-agent":"Nex-Kingshot-Redeemer/1.0"},signal:AbortSignal.timeout(15000)});
   const body=await response.text();
-  if(!response.ok){const error=Error("HTTP "+response.status);await recordScraperRun(kind==="api"?"kingshot-api":"kingshot-page",response.status,[],false,error);throw error;}
+  if(!response.ok){const error=Error("HTTP "+response.status);await recordScraperRun(sourceName,response.status,[],false,error);throw error;}
   if(kind==="api"){
    let data=null;try{data=JSON.parse(body)}catch{}
    const codes=data?.status==="success"?normalizeCodes(data):[];
@@ -256,13 +297,13 @@ async function fetchSource(url,kind){
    await recordScraperRun("kingshot-api",response.status,codes,data?.status==="success",parseError);
    return {data,codes};
   }
-  const codes=extractPageCodes(body);
-  await updateScraperHealth("kingshot-page",codes.length,null);
-  await recordScraperRun("kingshot-page",response.status,codes,true,null);
+  const codes=kind==="page"?extractPageCodes(body):extractPublicSourceCodes(body,sourceName);
+  await updateScraperHealth(sourceName,codes.length,null);
+  await recordScraperRun(sourceName,response.status,codes,true,null);
   return {html:body,codes};
  }catch(error){
-  await updateScraperHealth(kind==="api"?"kingshot-api":"kingshot-page",0,error?.message||"Source request failed");
-  await recordScraperRun(kind==="api"?"kingshot-api":"kingshot-page",null,[],false,error);
+  await updateScraperHealth(sourceName,0,error?.message||"Source request failed");
+  await recordScraperRun(sourceName,null,[],false,error);
   return kind==="api"?{data:null,codes:[]}:{html:"",codes:[]};
  }
 
@@ -325,27 +366,28 @@ export default async function handler(req,res){
   const lock=await rpc("claim_kingshot_worker_run",{});
   if(!lock?.claimed)return res.status(200).json({ok:true,skipped:true,reason:"WORKER_ALREADY_RUNNING"});
   workerToken=lock.token;
-  const [apiSource,pageSource,adminRows]=await Promise.all([
+  const [apiSource,pageSource,publicSources,adminRows]=await Promise.all([
    fetchSource(GIFT_SOURCE_URL,"api"),
    fetchSource("https://kingshot.net/gift-codes","page"),
+   Promise.all(PUBLIC_GIFT_SOURCES.map(source=>fetchSource(source.url,"public:"+source.name))),
    rpc("list_kingshot_admin_gift_codes",{})
   ]);
   const data=apiSource.data;
   const apiCodes=apiSource.codes;
-  const pageHtml=pageSource.html;
   const pageCodes=pageSource.codes;
+  const publicCodes=publicSources.flatMap((result,index)=>result.codes.length?result.codes.map(row=>({...row,source:PUBLIC_GIFT_SOURCES[index].name})):[]);
   const adminCodes=(Array.isArray(adminRows)?adminRows:[]).filter(row=>row?.active!==false).map(row=>({
    code:String(row?.code||"").trim(),
    expiresAt:null,
    createdAt:row?.source_date?Date.parse(String(row.source_date)):Date.parse(String(row?.first_seen_at||"")),
    source:"admin"
   })).filter(row=>isLikelyGiftCode(row.code));
-  const codes=mergeCodes(apiCodes,[...pageCodes,...VERIFIED_FALLBACK_CODES,...adminCodes]);
+  const codes=mergeCodes([apiCodes,pageCodes,publicCodes,VERIFIED_FALLBACK_CODES,adminCodes]);
   if(!codes.length)throw Error("Kingshot gift-code sources returned no active codes.");
-  console.log("Kingshot auto feed:",{apiActive:data?.data?.activeCount??null,apiCodes:apiCodes.map(x=>x.code),pageCodes:pageCodes.map(x=>x.code),adminCodes:adminCodes.map(x=>x.code),merged:codes.map(x=>x.code)});
+  console.log("Kingshot auto feed:",{apiActive:data?.data?.activeCount??null,apiCodes:apiCodes.map(x=>x.code),pageCodes:pageCodes.map(x=>x.code),publicSources:publicCodes.map(x=>({code:x.code,source:x.source})),adminCodes:adminCodes.map(x=>x.code),merged:codes.map(x=>x.code)});
   const knownCodes=new Set((Array.isArray(adminRows)?adminRows:[]).map(row=>String(row?.code||"").toUpperCase()));
   const newCodes=codes.filter(item=>!knownCodes.has(String(item.code).toUpperCase()));
-  for(const item of newCodes)await sendDiscordEvent({title:"🎁 New Kingshot gift code",description:"A new active gift code was discovered by the scraper.",fields:[{name:"Gift code",value:String(item.code),inline:true},{name:"Source",value:String(item.source||"merged"),inline:true},{name:"Expires",value:item.expiresAt&&!Number.isNaN(item.expiresAt)?new Date(item.expiresAt).toISOString():"Not specified",inline:true}]});
+  for(const item of newCodes)await sendDiscordEvent({title:"🎁 New Kingshot gift code",description:"A new active gift code was discovered by the multi-source scraper.",fields:[{name:"Gift code",value:String(item.code),inline:true},{name:"Sources",value:String((item.sources||[item.source||"merged"]).join(", ")),inline:true},{name:"Expires",value:item.expiresAt&&!Number.isNaN(item.expiresAt)?new Date(item.expiresAt).toISOString():"Not specified",inline:true}]});
   await Promise.all(codes.map(item=>rpc("upsert_kingshot_gift_code",{
    p_code:item.code,
    p_source_date:item.createdAt&&!Number.isNaN(item.createdAt)?new Date(item.createdAt).toISOString().slice(0,10):null
@@ -358,7 +400,7 @@ export default async function handler(req,res){
   const totals=results.reduce((a,r)=>{
    a.attempted+=(r?.attempted||0);a.success+=(r?.success||0);a.alreadyHandled+=(r?.alreadyHandled||0);a.skipped+=(r?.skipped||0);a.errors+=r?.error?1:0;a.stale+=r?.stale?1:0;return a;
   },{attempted:0,success:0,alreadyHandled:0,skipped:0,errors:0,stale:0});
-  const summary={source:"kingshot.net",codes:codes.length,players:list.length,...totals};
+  const summary={source:"multi-source",sources:PUBLIC_GIFT_SOURCES.length+2,codes:codes.length,players:list.length,...totals};
   await rpc("finish_kingshot_worker_run",{p_token:workerToken,p_status:totals.errors||totals.stale?"COMPLETED_WITH_WARNINGS":"COMPLETED",p_error:null,p_summary:summary}).catch(error=>console.error("Worker state update failed:",error?.message||error));
   if(totals.attempted||totals.errors||totals.stale||newCodes.length)await sendDiscordEvent({title:"📊 Auto-redeem cycle",description:"Scheduled Kingshot worker completed a cycle with activity.",fields:[{name:"Players",value:String(list.length),inline:true},{name:"Codes",value:String(codes.length),inline:true},{name:"Attempts",value:String(totals.attempted),inline:true},{name:"Successes",value:String(totals.success),inline:true},{name:"Errors",value:String(totals.errors),inline:true},{name:"Stale",value:String(totals.stale),inline:true}],color:totals.errors||totals.stale?0xFEE75C:0x57F287});
   return res.status(200).json({ok:true,...summary});
