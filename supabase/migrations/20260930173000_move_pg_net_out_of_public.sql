@@ -3,15 +3,15 @@
 -- history is ephemeral and can be recreated safely.
 create schema if not exists extensions;
 
+alter event trigger issue_pg_net_access disable;
+
 drop extension pg_net;
 
--- Supabase's pg_net grant event trigger currently expects this legacy schema
--- name while the extension is being created, so keep an empty compatibility
--- schema during installation. The extension itself lives in extensions.
-create schema if not exists net;
+drop schema if exists net cascade;
 
 create extension pg_net with schema extensions;
 
+-- Preserve the scheduler's one-minute cadence using the new extension schema.
 do $$
 declare
   v_command text := $cmd$
@@ -34,3 +34,5 @@ begin
   );
 end
 $$;
+
+alter event trigger issue_pg_net_access enable;
