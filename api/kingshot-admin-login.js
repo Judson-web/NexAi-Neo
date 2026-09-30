@@ -1,4 +1,5 @@
 import crypto from"node:crypto";
+import {rateLimit} from"../lib/request-rate-limit.js";
 const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
 const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_zF1yhk4TYTujQh8w5NyAJA_3H2K5CEg";
 const COOKIE="ks_admin_session";
@@ -11,6 +12,7 @@ export default async function handler(req,res){
  if(!["POST","DELETE"].includes(req.method))return res.status(405).json({error:"Method not allowed"});
  try{
   if(req.method==="DELETE"){const session=getCookie(req);if(session)await rpc("kingshot_admin_logout",{p_token_hash:hash(session)}).catch(()=>{});setCookie(res,"",0);return res.status(200).json({ok:true})}
+  if(!rateLimit(req,res,"admin-login",5,900000))return res.status(429).json({error:"Too many login attempts. Please try again later."});
   const body=req.body||{},email=String(body.email||"").trim().toLowerCase(),password=String(body.password||"");
   if(!email||!password)return res.status(400).json({error:"Email and password are required."});
   const session=token();
