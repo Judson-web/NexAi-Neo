@@ -27,6 +27,27 @@ assertCheck(
  auto.includes("const item=codes.find(code=>!handled.has(code.code.toUpperCase()));")
 );
 assertCheck(
+ "Worker pool fans redemption work across three internal shards",
+ auto.includes("const WORKER_COUNT=3;") &&
+ auto.includes("runWorkerShard") &&
+ auto.includes("Promise.all(assignments.map")
+);
+assertCheck(
+ "Worker shards use durable per-slot claims",
+ auto.includes('rpc("claim_kingshot_worker_slot"') &&
+ auto.includes('rpc("finish_kingshot_worker_slot"')
+);
+assertCheck(
+ "Worker shard endpoint requires internal authorization",
+ auto.includes('if(mode==="worker")') &&
+ auto.includes('if(!workerAuthorized)return res.status(401).json({error:"Unauthorized"});')
+);
+assertCheck(
+ "Worker pool preserves bounded per-shard concurrency",
+ auto.includes("const PLAYER_CONCURRENCY=6;") &&
+ auto.includes("runWithConcurrency(assigned,p=>redeemForPlayer(p,codes),PLAYER_CONCURRENCY)")
+);
+assertCheck(
  "Global expired-code lookup fails open instead of crashing the worker",
  auto.includes('list_kingshot_expired_gift_codes",{}).catch(error=>')
 );
@@ -96,6 +117,14 @@ assertCheck(
 assertCheck(
  "Worker claim RPC is revoked from public roles",
  /revoke all on function public\.claim_kingshot_worker_run\(\) from public, anon, authenticated/i.test(migrations)
+);
+assertCheck(
+ "Worker pool claim RPC is revoked from public roles",
+ /revoke all on function public\.claim_kingshot_worker_slot\(integer\) from public, anon, authenticated/i.test(migrations)
+);
+assertCheck(
+ "Worker pool finish RPC is revoked from public roles",
+ /revoke all on function public\.finish_kingshot_worker_slot\(integer,uuid,text,text,jsonb\) from public, anon, authenticated/i.test(migrations)
 );
 assertCheck(
  "Admin SECURITY DEFINER RPCs are revoked from public roles",
