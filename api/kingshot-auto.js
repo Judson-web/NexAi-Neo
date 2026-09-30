@@ -356,6 +356,7 @@ async function redeemForPlayer(player,codes){
  // This keeps the request comfortably below pg_net's 5s HTTP timeout and
  // respects Kingshot's per-player TOO FREQUENT rate limit. Older missed
  // active codes are picked up on subsequent runs.
+ if(!codes.length)return {attempted:0,success:0,alreadyHandled:0,skipped:1};
  const item=codes.find(code=>!handled.has(code.code.toUpperCase()));
  if(!item)return {attempted:0,success:0,alreadyHandled:codes.length,skipped:0};
 
@@ -418,16 +419,32 @@ export default async function handler(req,res){
   if(!codes.length)throw Error("Kingshot gift-code sources returned no active codes.");
   console.log("Kingshot auto feed:",{apiActive:data?.data?.activeCount??null,apiCodes:apiCodes.map(x=>x.code),pageCodes:pageCodes.map(x=>x.code),publicSources:publicCodes.map(x=>({code:x.code,source:x.source})),adminCodes:adminCodes.map(x=>x.code),merged:codes.map(x=>x.code)});
   const knownCodes=new Set((Array.isArray(adminRows)?adminRows:[]).map(row=>String(row?.code||"").toUpperCase()));
-  const newCodes=codes.filter(item=>!knownCodes.has(String(item.code).toUpperCase()));
-  for(const item of newCodes)await sendDiscordEvent({title:"🎁 New Kingshot gift code",description:"A new active gift code was discovered by the multi-source scraper.",fields:[{name:"Gift code",value:String(item.code),inline:true},{name:"Sources",value:String((item.sources||[item.source||"merged"]).join(", ")),inline:true},{name:"Expires",value:item.expiresAt&&!Number.isNaN(item.expiresAt)?new Date(item.expiresAt).toISOString():"Not specified",inline:true}]});
+
   await Promise.all(codes.map(item=>rpc("upsert_kingshot_gift_code",{
    p_code:item.code,
    p_source_date:item.createdAt&&!Number.isNaN(item.createdAt)?new Date(item.createdAt).toISOString().slice(0,10):null
   })));
+  const expiredRows=await rpc("list_kingshot_expired_gift_codes",{}).catch(error=>{
+   console.error("Expired-code lookup failed:",error?.message||error);
+   return [];
+  });
+  const expiredCodes=new Set((Array.isArray(expiredRows)?expiredRows:[])
+   .map(row=>String(row?.gift_code||"").trim().toUpperCase())
+   .filter(Boolean));
+  const activeCodes=codes.filter(item=>!expiredCodes.has(item.code.toUpperCase()));
+  console.log("Kingshot auto expiry filter:",{
+   discovered:codes.length,
+   expired:expiredCodes.size,
+   filtered:codes.length-activeCodes.length,
+   expiredCodes:[...expiredCodes].slice(0,50),
+   remaining:activeCodes.map(x=>x.code)
+  });
+  const newCodes=activeCodes.filter(item=>!knownCodes.has(String(item.code).toUpperCase()));
+  for(const item of newCodes)await sendDiscordEvent({title:"🎁 New Kingshot gift code",description:"A new active gift code was discovered by the multi-source scraper.",fields:[{name:"Gift code",value:String(item.code),inline:true},{name:"Sources",value:String((item.sources||[item.source||"merged"]).join(", ")),inline:true},{name:"Expires",value:item.expiresAt&&!Number.isNaN(item.expiresAt)?new Date(item.expiresAt).toISOString():"Not specified",inline:true}]});
   const players=await rpc("list_kingshot_autoredeem_players",{});
   const list=Array.isArray(players)?players:[];
   console.log("Kingshot auto players:",{count:list.length,players:list.map(x=>x.player_id)});
-  const results=await runWithConcurrency(list,p=>redeemForPlayer(p,codes),PLAYER_CONCURRENCY);
+  const results=await runWithConcurrency(list,p=>redeemForPlayer(p,activeCodes),PLAYER_CONCURRENCY);
   const redemptionDiagnostics=results.reduce((map,r)=>{
    if(!r?.redemptionStatus)return map;
    const status=String(r.redemptionStatus).toUpperCase();
@@ -446,9 +463,9 @@ export default async function handler(req,res){
   const totals=results.reduce((a,r)=>{
    a.attempted+=(r?.attempted||0);a.success+=(r?.success||0);a.alreadyHandled+=(r?.alreadyHandled||0);a.skipped+=(r?.skipped||0);a.errors+=r?.error?1:0;a.stale+=r?.stale?1:0;return a;
   },{attempted:0,success:0,alreadyHandled:0,skipped:0,errors:0,stale:0});
-  const summary={source:"multi-source",sources:PUBLIC_GIFT_SOURCES.length+2,codes:codes.length,players:list.length,...totals,redemptionFailures:topRedemptionFailures};
+  const summary={source:"multi-source",sources:PUBLIC_GIFT_SOURCES.length+2,codes:activeCodes.length,discoveredCodes:codes.length,expiredCodesFiltered:codes.length-activeCodes.length,players:list.length,...totals,redemptionFailures:topRedemptionFailures};
   await rpc("finish_kingshot_worker_run",{p_token:workerToken,p_status:totals.errors||totals.stale?"COMPLETED_WITH_WARNINGS":"COMPLETED",p_error:null,p_summary:summary}).catch(error=>console.error("Worker state update failed:",error?.message||error));
-  if(totals.attempted||totals.errors||totals.stale||newCodes.length)await sendDiscordEvent({title:"📊 Auto-redeem cycle",description:"Scheduled Kingshot worker completed a cycle with activity.",fields:[{name:"Players",value:String(list.length),inline:true},{name:"Codes",value:String(codes.length),inline:true},{name:"Attempts",value:String(totals.attempted),inline:true},{name:"Successes",value:String(totals.success),inline:true},{name:"Errors",value:String(totals.errors),inline:true},{name:"Stale",value:String(totals.stale),inline:true},{name:"Redemption failures",value:topRedemptionFailures.length?topRedemptionFailures.map(x=>`${x.category}/${x.errCode}/${x.status}: ${x.count}`).join("\n").slice(0,1024):"None",inline:false}],color:totals.errors||totals.stale?0xFEE75C:0x57F287});
+  if(totals.attempted||totals.errors||totals.stale||newCodes.length)await sendDiscordEvent({title:"📊 Auto-redeem cycle",description:"Scheduled Kingshot worker completed a cycle with activity.",fields:[{name:"Players",value:String(list.length),inline:true},{name:"Codes",value:String(activeCodes.length),inline:true},{name:"Attempts",value:String(totals.attempted),inline:true},{name:"Successes",value:String(totals.success),inline:true},{name:"Errors",value:String(totals.errors),inline:true},{name:"Stale",value:String(totals.stale),inline:true},{name:"Redemption failures",value:topRedemptionFailures.length?topRedemptionFailures.map(x=>`${x.category}/${x.errCode}/${x.status}: ${x.count}`).join("\n").slice(0,1024):"None",inline:false}],color:totals.errors||totals.stale?0xFEE75C:0x57F287});
   return res.status(200).json({ok:true,...summary});
  }catch(e){
   console.error("Kingshot auto redeem:",e);
