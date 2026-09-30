@@ -111,10 +111,24 @@ function extractPublicSourceCodes(html,sourceName){
   if(expiresAt&&!Number.isNaN(expiresAt)&&expiresAt<=Date.now())return;
   seen.add(key);rows.push({code,expiresAt,createdAt:0,source:sourceName});
  };
- const startPatterns=[/^Active Gift Codes:?$/i,/^Active Giftcodes:?$/i,/^All Kingshot codes:?$/i,/^New valid gift codes for Kingshot:?$/i,/^Active Codes:?$/i];
+ const startPatterns=[
+  /^Active Gift Codes:?$/i,/^Active Giftcodes:?$/i,/^All Kingshot codes:?$/i,
+  /^New valid gift codes for Kingshot:?$/i,/^Active Codes:?$/i,
+  /^Kingshot Gift Codes:?$/i,/^Working Gift Codes:?$/i,/^Current Gift Codes:?$/i,
+  /^Latest Gift Codes:?$/i,/^Valid Gift Codes:?$/i,/^Gift Codes:?$/i
+ ];
  const start=lines.findIndex(line=>startPatterns.some(p=>p.test(line)));
+ // Some publishers render the code list inside structured data or code-copy
+ // attributes instead of visible heading/row text. Prefer those explicit
+ // signals before falling back to the visible section parser.
+ for(const match of String(html||"").matchAll(/(?:data-(?:gift-)?code|(?:gift_?code|code))\\s*[:=]\\s*["']([A-Za-z0-9_-]{6,32})["']/gi)){
+  add(match[1]);
+ }
+ for(const match of String(html||"").matchAll(/(?:copy|redeem)[^<>]{0,80}\\b([A-Z][A-Z0-9]{5,31})\\b/gi)){
+  add(match[1]);
+ }
  if(start<0)return rows;
- const endPatterns=[/^Expired Kingshot codes:?$/i,/^Expired Gift Codes:?$/i,/^Expired Codes:?$/i,/^Unavailable or Archived Codes:?$/i,/^How to Redeem/i];
+ const endPatterns=[/^Expired Kingshot codes:?$/i,/^Expired Gift Codes:?$/i,/^Expired Codes:?$/i,/^Unavailable or Archived Codes:?$/i,/^How to Redeem/i,/^How to claim/i,/^How to use/i];
  let stop=lines.length;
  for(let i=start+1;i<lines.length;i++){if(endPatterns.some(p=>p.test(lines[i]))){stop=i;break;}}
  for(let i=start+1;i<stop;i++){
@@ -270,13 +284,12 @@ async function ensureCurrentKingdom(player){
   throw error;
  }
 }
-async function updateScraperHealth(source,codeCount,error=null){
+async async function updateScraperHealth(source,codeCount,error=null){
  try{
-  const result=await rpc("record_kingshot_scraper_health",{p_source:source,p_code_count:codeCount,p_error:error});
-  const health=Array.isArray(result)?result[0]:result;
-  if(health?.alert||health?.recovered){
-   await sendDiscordEvent({title:(health.alert?"🚨":"✅")+" Kingshot scraper "+(health.alert?"alert":"recovered"),description:health.alert?source+" returned no usable gift codes for 3 consecutive runs.":source+" is returning gift codes again.",fields:[{name:"Source",value:source,inline:true},{name:"Code count",value:String(codeCount),inline:true}],color:health.alert?0xED4245:0x57F287});
-  }
+  // Keep scraper health/history in Supabase, but do not spam Discord with
+  // per-source zero-code alerts. The primary API/page and merged feed remain
+  // observable through worker logs and scraper-run history.
+  await rpc("record_kingshot_scraper_health",{p_source:source,p_code_count:codeCount,p_error:error});
  }catch(error){console.error("Scraper health update failed:",source,error?.message||error)}
 }
 
