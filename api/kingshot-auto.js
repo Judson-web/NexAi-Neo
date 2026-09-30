@@ -437,7 +437,7 @@ async function runWorkerShard(slot,codes,players){
   await rpc("finish_kingshot_worker_slot",{
    p_slot:slot,
    p_token:workerToken,
-   p_status:totals.errors||totals.stale||workerFailures.length?"COMPLETED_WITH_WARNINGS":"COMPLETED",
+   p_status:totals.errors||totals.stale?"COMPLETED_WITH_WARNINGS":"COMPLETED",
    p_error:null,
    p_summary:summary
   }).catch(error=>console.error("Worker slot state update failed:",slot,error?.message||error));
