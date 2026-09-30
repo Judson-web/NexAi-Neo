@@ -6,7 +6,9 @@ const GIFT_SOURCE_URL="https://kingshot.net/api/gift-codes";
 const PUBLIC_GIFT_SOURCES=[
  {name:"gamesradar",url:"https://www.gamesradar.com/games/strategy/kingshot-codes-gift/"},
  {name:"kingshot-guides",url:"https://kingshotguides.com/guide/active-giftcodes-and-how-to-redeem/"},
- {name:"kingshot-world",url:"https://kingshotworld.com/guides/active-giftcodes-and-how-to-redeem/"}
+ {name:"kingshot-world",url:"https://kingshotworld.com/guides/active-giftcodes-and-how-to-redeem/"},
+ {name:"mrguider",url:"https://www.mrguider.org/codes/kingshot-codes/"},
+ {name:"pocketgamer",url:"https://www.pocketgamer.com/kingshot/codes/"}
 ];
 // Verified long-running fallback for codes that have been omitted from the upstream API feed.
 // Revalidated against public Kingshot code listings; the redemption endpoint remains the final authority.
@@ -115,7 +117,9 @@ function extractPublicSourceCodes(html,sourceName){
   /^Active Gift Codes:?$/i,/^Active Giftcodes:?$/i,/^All Kingshot codes:?$/i,
   /^New valid gift codes for Kingshot:?$/i,/^Active Codes:?$/i,
   /^Kingshot Gift Codes:?$/i,/^Working Gift Codes:?$/i,/^Current Gift Codes:?$/i,
-  /^Latest Gift Codes:?$/i,/^Valid Gift Codes:?$/i,/^Gift Codes:?$/i
+  /^Latest Gift Codes:?$/i,/^Valid Gift Codes:?$/i,/^Gift Codes:?$/i,
+  /^Working Kingshot Codes are:?$/i,/^Working Kingshot Codes:?$/i,
+  /^Active Kingshot codes:?$/i,/^All New Kingshot Codes:?$/i
  ];
  const start=lines.findIndex(line=>startPatterns.some(p=>p.test(line)));
  // Some publishers render the code list inside structured data or code-copy
@@ -132,13 +136,13 @@ function extractPublicSourceCodes(html,sourceName){
  let stop=lines.length;
  for(let i=start+1;i<lines.length;i++){if(endPatterns.some(p=>p.test(lines[i]))){stop=i;break;}}
  for(let i=start+1;i<stop;i++){
-  const line=lines[i];
-  const row=line.match(/^(?:[•*]\s*)?([A-Za-z0-9]{6,32})(?:\s+[–—-]\s+|\s+)(.*)$/);
+  const line=lines[i].replace(/^[•*·▪]\s*/,"").replace(/^[`]|[`]$/g,"").trim();
+  const row=line.match(/^([A-Za-z0-9]{6,32})(?:\s+[–—-]\s+|\s+)(.*)$/);
   if(row&&isLikelyGiftCode(row[1])){
    const expiry=(row[2]||"").match(/expires?[^0-9]*(\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+\d{4}|[A-Za-z]+\s+\d{1,2},?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{4})/i);
    add(row[1],expiry?parseExternalExpiry(expiry[1]):null);continue;
   }
-  const token=line.match(/^([A-Za-z][A-Za-z0-9]{5,31})$/);
+  const token=line.match(/^(?:`)?([A-Za-z][A-Za-z0-9]{5,31})(?:`)?$/);
   if(token&&isLikelyGiftCode(token[1])){
    const next=(lines[i+1]||"")+" "+(lines[i+2]||"");
    const expiry=next.match(/expires?[^0-9]*(\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+\d{4}|[A-Za-z]+\s+\d{1,2},?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{4})/i);
@@ -299,9 +303,25 @@ async function recordScraperRun(source,httpStatus,codes,parseOk,error){await rpc
 async function fetchSource(url,kind){
  const sourceName=kind==="api"?"kingshot-api":kind==="page"?"kingshot-page":kind.slice(7);
  try{
-  const response=await fetch(url,{headers:kind==="api"?{"accept":"application/json","user-agent":"Nex-Kingshot-Redeemer/1.0"}:{"accept":"text/html","user-agent":"Nex-Kingshot-Redeemer/1.0"},signal:AbortSignal.timeout(15000)});
+  let response=null,lastError=null;
+  for(let attempt=0;attempt<3;attempt++){
+   try{
+    response=await fetch(url,{headers:kind==="api"
+     ?{"accept":"application/json","user-agent":"Nex-Kingshot-Redeemer/1.1"}
+     :{"accept":"text/html,application/xhtml+xml","accept-language":"en-US,en;q=0.9","cache-control":"no-cache","user-agent":"Mozilla/5.0 (compatible; Nex-Kingshot-Redeemer/1.1; +https://kingshot-autoredeemer.vercel.app/)"},
+     signal:AbortSignal.timeout(15000)});
+    if(response.ok||![408,425,429,500,502,503,504].includes(response.status))break;
+    lastError=Error("HTTP "+response.status);
+   }catch(error){lastError=error}
+   if(attempt<2)await sleep(700*(attempt+1));
+  }
+  if(!response){
+   await recordScraperRun(sourceName,null,[],false,lastError||Error("Source request failed"));
+   await updateScraperHealth(sourceName,0,lastError?.message||"Source request failed");
+   return kind==="api"?{data:null,codes:[]}:{html:"",codes:[]};
+  }
   const body=await response.text();
-  if(!response.ok){const error=Error("HTTP "+response.status);await recordScraperRun(sourceName,response.status,[],false,error);throw error;}
+  if(!response.ok){const error=Error("HTTP "+response.status);await recordScraperRun(sourceName,response.status,[],false,error);await updateScraperHealth(sourceName,0,error.message);return kind==="api"?{data:null,codes:[]}:{html:"",codes:[]};}
   if(kind==="api"){
    let data=null;try{data=JSON.parse(body)}catch{}
    const codes=data?.status==="success"?normalizeCodes(data):[];
