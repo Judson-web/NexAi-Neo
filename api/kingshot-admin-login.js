@@ -16,7 +16,7 @@ export default async function handler(req,res){
   const body=req.body||{},email=String(body.email||"").trim().toLowerCase(),password=String(body.password||"");
   if(!email||!password)return res.status(400).json({error:"Email and password are required."});
   const session=token();
-  const ok=await rpc("kingshot_admin_create_session",{p_email:email,p_password:password,p_token_hash:hash(session)});
+  const ok=await rpc("kingshot_admin_create_session",{p_email:email,p_password_hash:password,p_token_hash:hash(session)});
   if(!ok)return res.status(401).json({error:"Invalid admin credentials."});
   setCookie(res,session,43200);
   return res.status(200).json({ok:true});
