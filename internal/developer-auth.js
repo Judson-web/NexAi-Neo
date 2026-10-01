@@ -1,6 +1,6 @@
 import crypto from"node:crypto";
 import{rateLimit}from"../lib/request-rate-limit.js";
-import{auth,clearDeveloperCookies,errorMessage,setDeveloperSession,getDeveloperUser,cookies}from"../../lib/developer-user-auth.js";
+import{auth,clearDeveloperCookies,errorMessage,setDeveloperSession,getDeveloperUser,cookies}from"../lib/developer-user-auth.js";
 const json=(res,status,data)=>res.status(status).json(data);
 const originAllowed=req=>{const origin=String(req.headers.origin||"");if(!origin)return true;const allowed=String(process.env.DEVELOPER_APP_ORIGIN||"https://kingshot-autoredeemer.vercel.app").replace(/\/$/,"");return origin===allowed};
 export default async function handler(req,res){
