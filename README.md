@@ -1,29 +1,71 @@
+<div align="center">
+
+<img src="./.github/assets/readme-banner.svg" alt="Kingshot Auto Redeemer">
+
 # Kingshot Auto Redeemer
 
-<p align="center"><strong>Automatic Kingshot gift-code redemption, built for continuous processing.</strong><br>Discover codes · backfill eligible players · prevent duplicate work · keep redemption history</p>
+**Continuous Kingshot gift-code discovery and automatic redemption.**
 
-<p align="center"><a href="https://kingshot-autoredeemer.vercel.app/">Live site</a> · <a href="https://kingshot-autoredeemer.vercel.app/info">How it works</a> · <a href="https://github.com/Judson-web/NexAi-Neo/issues">Issues</a></p>
+[![Live Site](https://img.shields.io/badge/Live%20Site-Kingshot%20Auto%20Redeemer-2563EB?style=for-the-badge&logo=vercel&logoColor=white)](https://kingshot-autoredeemer.vercel.app/)
+[![Node 22](https://img.shields.io/badge/Node.js-22.x-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=111827)](https://react.dev/)
+[![Vite 6](https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase&logoColor=111827)](https://supabase.com/)
+[![Vercel](https://img.shields.io/badge/Vercel-Production-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com/)
+[![Guardrails](https://github.com/Judson-web/NexAi-Neo/actions/workflows/guardrails.yml/badge.svg)](https://github.com/Judson-web/NexAi-Neo/actions/workflows/guardrails.yml)
 
-Kingshot Auto Redeemer is an independent community service for automating Kingshot gift-code redemption.
+[**Open the website →**](https://kingshot-autoredeemer.vercel.app/) · [**How it works →**](https://kingshot-autoredeemer.vercel.app/info) · [**Report an issue →**](https://github.com/Judson-web/NexAi-Neo/issues)
 
-Register a Kingshot Player ID once and the service can discover active gift codes, process eligible codes automatically, remember redemption results, and avoid repeating work that has already been handled.
+</div>
 
-> **Independent service:** This project is not affiliated with or endorsed by Century Games.
+> **Independent community service:** Kingshot Auto Redeemer is not affiliated with, endorsed by, or operated by Century Games.
 
 ## Features
+| | Capability | Description |
+|---|---|---|
+| ⚡ | **Auto Redeem** | Processes eligible gift codes automatically. |
+| 🔄 | **Backfill** | Picks up active codes a player has not handled. |
+| 🔎 | **Code Discovery** | Normalizes and deduplicates codes from configured public sources. |
+| 🧾 | **Persistent History** | Stores player/code outcomes to avoid unnecessary repeats. |
+| 🎟️ | **Manual Redeem** | Supports direct code submission from the website. |
+| 🧩 | **Durable Workers** | Distributes registered players across three worker shards. |
+| 🛡️ | **Server-side Processing** | Keeps privileged credentials and signing material out of the browser. |
+| 🚦 | **Rate Limiting** | Protects public API surfaces from excessive requests. |
+| 📡 | **Continuous Scheduler** | Production coordination runs every minute. |
 
-| Feature | What it does |
-| --- | --- |
-| ⚡ **Auto Redeem** | Processes eligible gift codes for registered players automatically. |
-| 🔄 **Backfill** | Picks up still-active codes a player has not handled. |
-| 🔎 **Code discovery** | Combines configured public sources into a normalized, deduplicated pool. |
-| 🧾 **Redemption history** | Records player/code outcomes and prevents unnecessary repeats. |
-| 🎟️ **Manual Redeem** | Lets users submit a specific gift code directly. |
-| 🧩 **Durable workers** | Splits registered players across three worker shards. |
-| 🛡️ **Server-side redemption** | Keeps privileged credentials and signing material away from the browser. |
-| 🚦 **Rate limiting** | Protects public endpoints against excessive requests. |
-| 📡 **Continuous scheduler** | Production coordination runs every minute. |
-| 📖 **Service info page** | Connected documentation is available at /info. |
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Public code sources] --> B[Normalize + deduplicate]
+    B --> C[Expiry + handled-code filtering]
+    C --> D[Redemption coordinator]
+    D --> W0[Worker 0]
+    D --> W1[Worker 1]
+    D --> W2[Worker 2]
+    W0 --> E[Player/code claim]
+    W1 --> E
+    W2 --> E
+    E --> F[Server-side redemption]
+    F --> G[(Supabase history)]
+    G --> C
+```
+
+## At a glance
+
+```text
+Register player
+     ↓
+Discover + normalize codes
+     ↓
+Filter expired / handled codes
+     ↓
+Distribute players across 3 workers
+     ↓
+Claim + redeem eligible codes
+     ↓
+Persist the result
+```
 
 ## What it does
 
@@ -100,18 +142,20 @@ The automatic redemption path currently uses:
 
 The architecture is intentionally server-side: privileged Supabase operations and redemption signing credentials are never exposed to the public frontend.
 
-## Site
+## Website
 
-Production website: https://kingshot-autoredeemer.vercel.app/
+**Production:** https://kingshot-autoredeemer.vercel.app/
 
-## Site routes
+The public site includes automatic redemption, manual redemption, service documentation, terms, and privacy pages.
 
-- / — main Kingshot Auto Redeemer landing/auto-redemption experience
-- /auto — Auto Redeem
-- /manual — Manual Redeem
-- /info — How the service works
-- /terms — Terms
-- /privacy — Privacy
+| Route | Purpose |
+|---|---|
+| `/` | Main service experience |
+| `/auto` | Automatic redemption |
+| `/manual` | Manual redemption |
+| `/info` | How the service works |
+| `/terms` | Terms |
+| `/privacy` | Privacy |
 
 ## Development
 
@@ -161,7 +205,20 @@ The repository includes automated checks for security regressions, production bu
 
 ## Project status
 
-The production service currently runs the durable three-worker redemption architecture and supports automatic processing, backfill, persistent history, live code discovery, manual redemption, and the connected service information page.
+The production system currently includes:
+
+- automatic gift-code redemption
+- manual redemption
+- continuous one-minute scheduling
+- three durable worker shards
+- six concurrent player operations per worker
+- persistent player/code redemption history
+- active-code discovery and expiry filtering
+- state-driven backfill
+- protected server-side APIs
+- connected service documentation at `/info`
+
+The repository's `main` branch is protected by required pull requests and CI checks before merging.
 
 ## Contributing
 
