@@ -1094,3 +1094,21 @@ body,#root{-webkit-text-size-adjust:100%;text-size-adjust:100%}
  .legal-hero h1{font-size:40px}
  .legal-body p{font-size:9px}
 }
+
+/* How it works — mobile drawer repair */
+@media(max-width:760px){
+ .info-app header{position:relative;z-index:100}
+ .info-menu-backdrop{position:fixed;z-index:90;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;background:rgba(3,4,7,.62);backdrop-filter:blur(3px);cursor:default;animation:info-drawer-fade .18s ease both}
+ .info-mobile-menu{position:fixed;z-index:95;top:64px;left:12px;right:12px;width:auto;display:grid;gap:5px;padding:8px;border:1px solid #2a2d38;border-radius:16px;background:rgba(13,15,21,.985);box-shadow:0 24px 70px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.035);backdrop-filter:blur(18px);animation:info-drawer-in .2s cubic-bezier(.2,.75,.25,1) both}
+ .info-drawer-head{display:flex;align-items:center;justify-content:space-between;padding:3px 4px 6px 7px;color:#5f6674;font-size:7px;font-weight:850;letter-spacing:.16em}
+ .info-drawer-head button{width:28px;height:28px;display:grid;place-items:center;border:1px solid #252833;border-radius:8px;background:#11131a;color:#7d8492;cursor:pointer}
+ .info-drawer-head button:hover,.info-drawer-head button:focus-visible{color:#fff;border-color:#3a3e4b;background:#171923}
+ .info-mobile-menu a{display:block;padding:11px 12px;border:1px solid transparent;border-radius:10px;color:#c0c4ce;font-size:10px;font-weight:800;text-decoration:none;transition:background .16s,border-color .16s,color .16s}
+ .info-mobile-menu a span{display:block;margin-top:3px;color:#626a78;font-size:8px;font-weight:600;line-height:1.35}
+ .info-mobile-menu a:hover,.info-mobile-menu a:focus-visible{background:#171923;border-color:#262a35;color:#fff;outline:none}
+ .info-mobile-menu a.active{background:#191622;border-color:#302a43;color:#f0edf5}
+ .info-mobile-menu a.active span{color:#827b95}
+}
+@keyframes info-drawer-in{from{opacity:0;transform:translateY(-7px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes info-drawer-fade{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.info-mobile-menu,.info-menu-backdrop{animation:none}}
