@@ -346,6 +346,32 @@ async function fetchSource(url,kind){
 }
 
 async function redeemForPlayer(player,codes){
+ // New registrations may not have a kingdom yet. Populate it immediately
+ // instead of waiting for the next daily reset revalidation.
+ if(!player.kingdom_id){
+  try{
+   const fresh=await fetchCurrentKingshotPlayer(player.player_id);
+   if(fresh.notFound){
+    await rpc("mark_kingshot_player_stale",{p_player_id:player.player_id,p_reason:"MIGHTPULSE_PLAYER_NOT_FOUND"});
+    await sendDiscordEvent({title:"🗑️ Deleted Kingshot account filtered",description:"A newly registered player could not be found during initial validation and was excluded from auto-redeem.",fields:[{name:"Player ID",value:String(player.player_id),inline:true}],color:0xFEE75C});
+    return {attempted:0,success:0,alreadyHandled:0,skipped:1,stale:1};
+   }
+   const p=fresh.player||{};
+   const currentKingdom=String(p.kid??p.kingdom_id??"").replace(/\D/g,"");
+   if(!currentKingdom)throw Error("MightPulse returned no kingdom for this player.");
+   const result=await rpc("record_kingshot_kingdom_revalidation",{
+    p_player_id:player.player_id,
+    p_kingdom_id:currentKingdom,
+    p_player_name:p.nick_name||p.name||p.nickname||null,
+    p_avatar_url:p.avatar_url||p.avatar||p.avatarUrl||null
+   });
+   player=result?.player||player;
+   console.log("Kingshot initial player validation:",{playerId:player.player_id,kingdomId:player.kingdom_id});
+  }catch(error){
+   console.error("Initial Kingshot player validation failed:",player.player_id,error?.message||error);
+   return {attempted:0,success:0,alreadyHandled:0,skipped:1,revalidationError:1};
+  }
+ }
  const kingdomState=await ensureCurrentKingdom(player);
  if(kingdomState.stale)return {attempted:0,success:0,alreadyHandled:0,skipped:1,stale:1};
  if(!kingdomState.player?.kingdom_id)return {attempted:0,success:0,alreadyHandled:0,skipped:1,revalidationError:1};
