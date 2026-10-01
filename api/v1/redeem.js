@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   }
   if (!key) return;
 
-  const body = req.body || {};
+  if (!rateLimit(req, res, "developer-api-key:" + key.id, key.requests_per_minute, 60000)) {\n    return res.status(429).json({ error: { code: "KEY_RATE_LIMITED", message: "This API key has reached its per-minute request limit." } });\n  }\n\n  const body = req.body || {};
   const result = await redeemKingshot({ playerId: body.playerId, code: body.code, kid: body.kingdomId ?? body.kid });
 
   const requestId = crypto.randomUUID();
