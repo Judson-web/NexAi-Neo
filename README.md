@@ -127,7 +127,6 @@ Do not commit:
 - Discord credentials
 - admin passwords
 - session tokens
-- Developer API keys
 
 ## Contributing
 
