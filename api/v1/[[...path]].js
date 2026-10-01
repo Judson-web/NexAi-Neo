@@ -1,3 +1,0 @@
-function route(req){const q=req.query?.path;if(Array.isArray(q)&&q.length)return q.join("/");if(typeof q==="string"&&q)return q;const pathname=String(req.url||"").split("?")[0];const marker="/api/v1/";return pathname.startsWith(marker)?decodeURIComponent(pathname.slice(marker.length)).replace(/^\/+|\/+$/g,""):""}
-import index from"../../internal/v1/index.js";import health from"../../internal/v1/health.js";import redeem from"../../internal/v1/redeem.js";
-export default async function handler(req,res){const p=route(req);if(p==="health")return health(req,res);if(p==="redeem")return redeem(req,res);return index(req,res)}
