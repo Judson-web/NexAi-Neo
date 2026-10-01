@@ -99,8 +99,9 @@ assertCheck("Admin session cookie is HttpOnly/Secure/Strict",
  adminLogin.includes("HttpOnly; Secure; SameSite=Strict"));
 assertCheck("Admin login uses a cryptographically random session token",
  adminLogin.includes("randomBytes(32)"));
-assertCheck("Admin password path delegates verification to Supabase",
- adminLogin.includes("kingshot_admin_create_session"));
+assertCheck("Admin access-key path delegates verification to the key RPC",
+ adminLogin.includes("kingshot_admin_create_session_with_key") &&
+ !adminLogin.includes("kingshot_admin_create_session""));
 
 assertCheck("Discord interaction handler does not embed a Supabase publishable key",
  !/sb_publishable_[A-Za-z0-9_-]+/.test(discordInteractions));
