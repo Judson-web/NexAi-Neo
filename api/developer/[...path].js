@@ -1,3 +1,0 @@
-function route(req){const q=req.query?.path;if(Array.isArray(q)&&q.length)return q.join("/");if(typeof q==="string"&&q)return q;const pathname=String(req.url||"").split("?")[0];const marker="/api/developer/";return pathname.startsWith(marker)?decodeURIComponent(pathname.slice(marker.length)).replace(/^\/+|\/+$/g,""):""}
-import auth from"../../internal/developer-auth.js";import keys from"../../internal/developer-keys.js";import issue from"../../internal/developer-key.js";
-export default async function handler(req,res){const p=route(req);if(p==="auth")return auth(req,res);if(p==="keys")return keys(req,res);if(p==="key")return issue(req,res);return res.status(404).json({error:"Developer endpoint not found.",route:p||null})}
