@@ -370,7 +370,30 @@ async function redeemForPlayer(player,codes){
  const status=String(d?.status||"ERROR").toUpperCase();
  const message=d?.message||d?.error||"";
  await rpc("record_kingshot_redemption",{p_player_id:player.player_id,p_code:item.code,p_status:status,p_err_code:d?.errCode??null,p_message:(d?.errorCategory?"["+d.errorCategory+"] ":"")+message});
- return {attempted:1,success:status==="SUCCESS"?1:0,alreadyHandled:0,skipped:0,redemptionStatus:status,redemptionErrorCategory:d?.errorCategory||null,redemptionErrCode:d?.errCode??null,redemptionMessage:message?String(message).slice(0,240):null};
+
+ // A deleted/invalid Kingshot account can surface as USER INFO ERROR (40020).
+ // Do not immediately remove the player: revalidate against the player API and
+ // only mark the registration stale when the authoritative lookup returns 404.
+ let stale=0;
+ if(String(d?.errCode??"") === "40020" || status === "USER INFO ERROR"){
+  try{
+   const fresh=await fetchCurrentKingshotPlayer(player.player_id);
+   if(fresh?.notFound){
+    await rpc("mark_kingshot_player_stale",{p_player_id:player.player_id,p_reason:"MIGHTPULSE_PLAYER_NOT_FOUND_AFTER_USER_INFO_ERROR"});
+    stale=1;
+    await sendDiscordEvent({
+     title:"🗑️ Deleted Kingshot account filtered",
+     description:"A registered player returned USER INFO ERROR and was confirmed missing by the player API. The registration is now stale and will be excluded from future auto-redeem cycles.",
+     fields:[{name:"Player ID",value:String(player.player_id),inline:true},{name:"Reason",value:"Player API returned 404",inline:true}],
+     color:0xFEE75C
+    });
+   }
+  }catch(error){
+   // A temporary player API failure must never deactivate a valid player.
+   console.warn("Deleted-player revalidation failed:",player.player_id,error?.message||error);
+  }
+ }
+ return {attempted:1,success:status==="SUCCESS"?1:0,alreadyHandled:0,skipped:0,stale,redemptionStatus:status,redemptionErrorCategory:d?.errorCategory||null,redemptionErrCode:d?.errCode??null,redemptionMessage:message?String(message).slice(0,240):null};
 }
 
 async function runWithConcurrency(players,fn,limit){
