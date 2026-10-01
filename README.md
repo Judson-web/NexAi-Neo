@@ -1,10 +1,29 @@
 # Kingshot Auto Redeemer
 
+<p align="center"><strong>Automatic Kingshot gift-code redemption, built for continuous processing.</strong><br>Discover codes · backfill eligible players · prevent duplicate work · keep redemption history</p>
+
+<p align="center"><a href="https://kingshot-autoredeemer.vercel.app/">Live site</a> · <a href="https://kingshot-autoredeemer.vercel.app/info">How it works</a> · <a href="https://github.com/Judson-web/NexAi-Neo/issues">Issues</a></p>
+
 Kingshot Auto Redeemer is an independent community service for automating Kingshot gift-code redemption.
 
 Register a Kingshot Player ID once and the service can discover active gift codes, process eligible codes automatically, remember redemption results, and avoid repeating work that has already been handled.
 
 > **Independent service:** This project is not affiliated with or endorsed by Century Games.
+
+## Features
+
+| Feature | What it does |
+| --- | --- |
+| ⚡ **Auto Redeem** | Processes eligible gift codes for registered players automatically. |
+| 🔄 **Backfill** | Picks up still-active codes a player has not handled. |
+| 🔎 **Code discovery** | Combines configured public sources into a normalized, deduplicated pool. |
+| 🧾 **Redemption history** | Records player/code outcomes and prevents unnecessary repeats. |
+| 🎟️ **Manual Redeem** | Lets users submit a specific gift code directly. |
+| 🧩 **Durable workers** | Splits registered players across three worker shards. |
+| 🛡️ **Server-side redemption** | Keeps privileged credentials and signing material away from the browser. |
+| 🚦 **Rate limiting** | Protects public endpoints against excessive requests. |
+| 📡 **Continuous scheduler** | Production coordination runs every minute. |
+| 📖 **Service info page** | Connected documentation is available at /info. |
 
 ## What it does
 
@@ -19,6 +38,20 @@ Register a Kingshot Player ID once and the service can discover active gift code
 - **Readable results** — game responses are mapped to statuses such as successful, already handled, expired, invalid, and rate limited.
 
 ## How automatic redemption works
+
+The production flow is intentionally simple:
+
+    Public code sources
+            ↓
+    Normalize + deduplicate + expiry filtering
+            ↓
+    Redemption coordinator
+       ↙       ↓       ↘
+    Worker 0  Worker 1  Worker 2
+       ↘       ↓       ↙
+    Player/code claims + redemption
+            ↓
+    Persistent redemption history
 
 1. A player registers their Kingshot Player ID.
 2. The service associates the registration with the player's current kingdom.
@@ -51,7 +84,7 @@ The service talks to the Kingshot gift-code endpoint from the server. Common gam
 
 Redemption history is per player and per code. This is separate from the global expired-code filter.
 
-## Production architecture
+## Worker architecture
 
 The application is deployed on Vercel with Supabase providing the persistent data layer.
 
@@ -66,6 +99,10 @@ The automatic redemption path currently uses:
 - a minute-based production scheduler
 
 The architecture is intentionally server-side: privileged Supabase operations and redemption signing credentials are never exposed to the public frontend.
+
+## Site
+
+Production website: https://kingshot-autoredeemer.vercel.app/
 
 ## Site routes
 
@@ -118,6 +155,18 @@ Do not commit:
 - admin passwords or session tokens
 - other production credentials
 
+## Guardrails
+
+The repository includes automated checks for security regressions, production builds, endpoint smoke tests, worker health, privileged RPC restrictions, server-only credentials, worker-pool invariants, duplicate prevention, and unsafe pg_net migration patterns.
+
 ## Project status
 
 The production service currently runs the durable three-worker redemption architecture and supports automatic processing, backfill, persistent history, live code discovery, manual redemption, and the connected service information page.
+
+## Contributing
+
+Changes affecting redemption behavior, database functions, worker coordination, authentication, or public API security should be treated as production-sensitive. Keep secrets out of source control, run the production build and relevant regression checks, and keep unrelated changes out of focused fixes.
+
+## License
+
+No open-source license has been declared for this repository. Unless a license is added, the source should not be assumed to be freely reusable or redistributed.
