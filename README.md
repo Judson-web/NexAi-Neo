@@ -1,14 +1,12 @@
 # Kingshot Auto Redeemer
 
-<p align="center"><strong>Automatic Kingshot gift-code redemption, built for continuous processing.</strong><br>Discover codes · backfill eligible players · prevent duplicate work · keep redemption history</p>
+> **Automatic Kingshot gift-code redemption with continuous processing, backfill, persistent history, and duplicate protection.**
 
-<p align="center"><a href="https://kingshot-autoredeemer.vercel.app/">Live site</a> · <a href="https://kingshot-autoredeemer.vercel.app/info">How it works</a> · <a href="https://github.com/Judson-web/NexAi-Neo/issues">Issues</a></p>
+[Live website](https://kingshot-autoredeemer.vercel.app/) · [How it works](https://kingshot-autoredeemer.vercel.app/info) · [Report an issue](https://github.com/Judson-web/NexAi-Neo/issues)
 
-Kingshot Auto Redeemer is an independent community service for automating Kingshot gift-code redemption.
+Kingshot Auto Redeemer is an independent community service that helps registered Kingshot players discover and redeem eligible gift codes automatically. The service runs the redemption workflow on the server, remembers player/code outcomes, and continuously processes new eligible work.
 
-Register a Kingshot Player ID once and the service can discover active gift codes, process eligible codes automatically, remember redemption results, and avoid repeating work that has already been handled.
-
-> **Independent service:** This project is not affiliated with or endorsed by Century Games.
+**Not affiliated with or endorsed by Century Games.**
 
 ## Features
 
@@ -24,6 +22,22 @@ Register a Kingshot Player ID once and the service can discover active gift code
 | 🚦 **Rate limiting** | Protects public endpoints against excessive requests. |
 | 📡 **Continuous scheduler** | Production coordination runs every minute. |
 | 📖 **Service info page** | Connected documentation is available at /info. |
+
+## At a glance
+
+```text
+Register player
+     ↓
+Discover + normalize codes
+     ↓
+Filter expired / handled codes
+     ↓
+Distribute players across 3 workers
+     ↓
+Claim + redeem eligible codes
+     ↓
+Persist the result
+```
 
 ## What it does
 
@@ -100,9 +114,11 @@ The automatic redemption path currently uses:
 
 The architecture is intentionally server-side: privileged Supabase operations and redemption signing credentials are never exposed to the public frontend.
 
-## Site
+## Website
 
-Production website: https://kingshot-autoredeemer.vercel.app/
+**Live:** https://kingshot-autoredeemer.vercel.app/
+
+The public site includes automatic redemption, manual redemption, service documentation, terms, and privacy pages.
 
 ## Site routes
 
@@ -161,7 +177,20 @@ The repository includes automated checks for security regressions, production bu
 
 ## Project status
 
-The production service currently runs the durable three-worker redemption architecture and supports automatic processing, backfill, persistent history, live code discovery, manual redemption, and the connected service information page.
+The production system currently includes:
+
+- automatic gift-code redemption
+- manual redemption
+- continuous one-minute scheduling
+- three durable worker shards
+- six concurrent player operations per worker
+- persistent player/code redemption history
+- active-code discovery and expiry filtering
+- state-driven backfill
+- protected server-side APIs
+- connected service documentation at `/info`
+
+The repository's `main` branch is protected by required pull requests and CI checks before merging.
 
 ## Contributing
 
