@@ -3,14 +3,14 @@ import React from "react";
 const services={
   "kingshot-manual":{label:"Kingshot Manual Redeemer",summary:"Manual gift-code redemption for a Kingshot Player ID."},
   "kingshot-auto":{label:"Kingshot Auto Redeem",summary:"Registration and automatic processing of active Kingshot gift codes."},
-  "discord-pfp":{label:"Discord PFP Extractor",summary:"Lookup and download tool for publicly available Discord profile avatar data."}
+  "discord-pfp":{label:"Discord PFP Extractor",summary:"Lookup and download tool for publicly available Discord profile avatar data."},\n  "developer-api":{label:"Kingshot Developer API",summary:"Authenticated server-to-server API access for Kingshot gift-code redemption."}
 };
 
 export default function LegalApp({type}){
   const key=new URLSearchParams(location.search).get("service");
   const service=services[key]||services["kingshot-manual"];
   const privacy=type==="privacy";
-  const base=key==="discord-pfp"?"/extract":"/";
+  const base=key==="discord-pfp"?"/extract":key==="developer-api"?"/developers.html":"/";
   const serviceKey=key||"kingshot-manual";
   return <div className="app legal-app">
     <header>
@@ -33,7 +33,7 @@ export default function LegalApp({type}){
 
         {privacy?<><h2>What we handle</h2>
         {key==="discord-pfp"?<p>The Discord PFP Extractor is designed to work with publicly available Discord profile information. Recent lookup IDs may be kept locally in your browser to make repeat searches easier. The service does not require you to submit a Discord password or account credentials.</p>:<p>The Kingshot services may process the information needed to provide their features. Depending on the service, this can include Player ID, kingdom ID, player name, avatar URL, submitted gift codes, redemption results, timestamps, and support requests. Auto Redeem also keeps the registration state and processing history needed to prevent duplicate work, track redemption outcomes, and operate the service reliably. The auto-redeem service stores registered player information so scheduled processing can work after you leave the site. Input fields use client-side format checks to catch common mistakes before submission. These checks are a convenience feature, not a privacy or security boundary; the service may also validate submitted data server-side before processing it.</p>}
-        <h2>Support requests</h2>
+        {key==="developer-api"&&<><h2>Developer API accounts</h2><p>Developer accounts use Supabase Auth email/password authentication. The service stores the account identifier and email address needed to manage developer keys. Authentication sessions are held in secure, HttpOnly, same-site cookies. API keys are generated with cryptographically secure randomness and only a SHA-256 hash plus a short display prefix is stored; the full secret is shown once at creation and cannot be recovered by the service.</p><h2>Developer API usage</h2><p>Developer API requests are authenticated by the key supplied in the Authorization header. The service records aggregate usage counters, last-use timestamps, and request identifiers needed for quota enforcement, abuse prevention, reliability, and troubleshooting. The upstream Kingshot signing secret is never exposed to developer clients. Do not put developer API keys in browser code, mobile apps, public repositories, or client-side environment variables.</p></>}\n        <h2>Support requests</h2>
         <p>If you submit a request to remove an auto-redeem registration, the Player ID and the reason you provide are processed so an administrator can review the request. Do not include passwords, payment details, authentication codes, or other sensitive information in a support request.</p>
         <h2>Advertising and measurement</h2>
         <p>Some pages may display sponsored banner advertisements. The service records basic ad delivery measurements such as impressions and clicks. Clicking an advertisement may pass through this service's tracking endpoint before you are sent to the advertiser's destination URL. The advertiser's own privacy practices apply after you leave this service.</p>
@@ -51,7 +51,7 @@ export default function LegalApp({type}){
         <p>Gift codes are controlled by the underlying game service. Codes can expire, reach usage limits, be region or account restricted, or be rejected without notice. We do not guarantee that a submitted code will work or that an automatic redemption attempt will succeed.</p>
         <h2>Auto Redeem</h2>
         <p>When you register a Player ID for Auto Redeem, you authorize this service to periodically process eligible gift codes for that registered player using the information required by the redemption workflow. The system may automatically retry or process newly discovered codes according to its operational rules, and redemption results may be recorded for duplicate prevention, auditing, and troubleshooting. You can request removal of a registration through the support form. You are responsible for ensuring that you have the right to use the Player ID you submit.</p>
-        <h2>Advertising</h2>
+        {key==="developer-api"&&<><h2>Developer API</h2><p>Developer API access is provided for server-side integrations. You are responsible for protecting issued API keys, rotating or revoking keys when they are exposed, and using the API within its documented limits. Do not share keys publicly, embed them in client-side applications, attempt to bypass quotas or authentication, or use the API to overload, probe, or interfere with the service or upstream systems. We may suspend or revoke access for abuse, security incidents, or material violations of these terms.</p><h2>API limits and availability</h2><p>Developer API keys are currently limited to up to 3 active keys per account, with documented per-key request limits. Limits may change as the service evolves. A successful authentication does not guarantee that a redemption will succeed; the upstream game service controls code validity, availability, eligibility, and redemption outcomes.</p></>}\n        <h2>Advertising</h2>
         <p>Some pages may contain sponsored advertisements. Advertisements are provided by third parties and may link to external websites. We do not make the third party's products, services, claims, policies, or availability part of these terms. Your interactions with an advertiser are governed by the advertiser's own terms.</p>
         <h2>Availability and changes</h2>
         <p>The service is provided on an as-available basis. Features, APIs, gift-code sources, advertisements, and integrations may change, be interrupted, or be removed without notice. We do not guarantee uninterrupted access, accuracy of third-party data, or successful redemption.</p>
@@ -65,7 +65,7 @@ export default function LegalApp({type}){
 
         <h2>No affiliation</h2>
         <p>This project is independent and should not be represented as an official Century Games, Kingshot, or Discord service. Product names, logos, and trademarks remain the property of their respective owners.</p>
-        <p className="legal-note">This notice describes the current operation of this independent community service and is not legal advice. Effective: September 30, 2026.</p>
+        <p className="legal-note">This notice describes the current operation of this independent community service and is not legal advice. Effective: October 1, 2026.</p>
       </section>
     </main>
     <footer><span>© 2026 Judson · Independent community service</span><span><a href={"/terms?service="+serviceKey}>Terms</a> · <a href={"/privacy?service="+serviceKey}>Privacy</a></span></footer>

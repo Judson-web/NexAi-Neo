@@ -150,7 +150,7 @@ The service also exposes a versioned API for third-party Kingshot tools, bots, a
 
 | Method | Endpoint | Authentication | Purpose |
 |---|---|---|---|
-| GET | `/api/v1` | None | API metadata |
+| GET | `/api/v1` | None | API metadata |\n| GET | `/api/v1/health` | None | Health check |
 | GET | `/api/v1/health` | None | Health check |
 | POST | `/api/v1/redeem` | Bearer API key | Redeem a gift code |
 
@@ -163,13 +163,13 @@ curl -X POST https://kingshot-autoredeemer.vercel.app/api/v1/redeem \\
   -d '{"playerId":"123456789","kingdomId":"1125","code":"EXAMPLECODE"}'
 ```
 
-API keys are stored as hashes and never returned after creation. Each key has its own daily quota, while the public API also has a short-window abuse guard. The developer API is an independent community interface, not an official Century Games API.
+Developer accounts require verified email authentication before key management. API keys are cryptographically random, stored only as SHA-256 hashes, shown in full only once, and scoped to the owning account. Each account can have up to 3 active keys. The current default per-key quota is 2 requests/minute and 100 requests/day; both are enforced centrally in PostgreSQL, while a separate short-window IP guard provides additional abuse protection. The developer API is an independent community interface, not an official Century Games API. Never expose keys in browser code, mobile apps, public repositories, or frontend environment variables.
 
 ## Website
 
 **Production:** https://kingshot-autoredeemer.vercel.app/
 
-The public site includes automatic redemption, manual redemption, service documentation, terms, and privacy pages.
+The public site includes automatic redemption, manual redemption, a developer portal/API, service documentation, terms, and privacy pages.
 
 | Route | Purpose |
 |---|---|
@@ -178,7 +178,7 @@ The public site includes automatic redemption, manual redemption, service docume
 | `/manual` | Manual redemption |
 | `/info` | How the service works |
 | `/terms` | Terms |
-| `/privacy` | Privacy |
+| `/privacy` | Privacy |\n| `/developers.html` | Developer API portal |
 
 ## Development
 
@@ -250,3 +250,4 @@ Changes affecting redemption behavior, database functions, worker coordination, 
 ## License
 
 This project is licensed under the [MIT License](./LICENSE).
+\n## Developer portal\n\nOpen **https://kingshot-autoredeemer.vercel.app/developers.html** to create a developer account, verify your email, create/revoke API keys, and view integration examples. The browser-facing portal uses secure HttpOnly session cookies; the redemption API itself uses `Authorization: Bearer ks_live_...`.\n\nThe developer API intentionally separates three trust boundaries: Supabase Auth protects the developer account, hashed API keys authorize server-to-server API calls, and the upstream Kingshot signing material remains server-only. API responses include a request ID for support and troubleshooting, and the API uses stable error codes for authentication, quota, validation, and redemption failures.\n
