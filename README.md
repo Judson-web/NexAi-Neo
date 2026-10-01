@@ -12,6 +12,7 @@
 [![Vite 6](https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase&logoColor=111827)](https://supabase.com/)
 [![Vercel](https://img.shields.io/badge/Vercel-Production-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com/)
+[![Guardrails](https://github.com/Judson-web/NexAi-Neo/actions/workflows/guardrails.yml/badge.svg)](https://github.com/Judson-web/NexAi-Neo/actions/workflows/guardrails.yml)
 
 [**Open the website →**](https://kingshot-autoredeemer.vercel.app/) · [**How it works →**](https://kingshot-autoredeemer.vercel.app/info) · [**Report an issue →**](https://github.com/Judson-web/NexAi-Neo/issues)
 
@@ -31,6 +32,24 @@
 | 🛡️ | **Server-side Processing** | Keeps privileged credentials and signing material out of the browser. |
 | 🚦 | **Rate Limiting** | Protects public API surfaces from excessive requests. |
 | 📡 | **Continuous Scheduler** | Production coordination runs every minute. |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Public code sources] --> B[Normalize + deduplicate]
+    B --> C[Expiry + handled-code filtering]
+    C --> D[Redemption coordinator]
+    D --> W0[Worker 0]
+    D --> W1[Worker 1]
+    D --> W2[Worker 2]
+    W0 --> E[Player/code claim]
+    W1 --> E
+    W2 --> E
+    E --> F[Server-side redemption]
+    F --> G[(Supabase history)]
+    G --> C
+```
 
 ## At a glance
 
@@ -125,13 +144,9 @@ The architecture is intentionally server-side: privileged Supabase operations an
 
 ## Website
 
-**Live:** https://kingshot-autoredeemer.vercel.app/
+**Production:** https://kingshot-autoredeemer.vercel.app/
 
 The public site includes automatic redemption, manual redemption, service documentation, terms, and privacy pages.
-
-## Website
-
-**Production:** https://kingshot-autoredeemer.vercel.app/
 
 | Route | Purpose |
 |---|---|
