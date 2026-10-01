@@ -3,14 +3,13 @@ import React from "react";
 const services={
   "kingshot-manual":{label:"Kingshot Manual Redeemer",summary:"Manual gift-code redemption for a Kingshot Player ID."},
   "kingshot-auto":{label:"Kingshot Auto Redeem",summary:"Registration and automatic processing of active Kingshot gift codes."},
-  "developer-api":{label:"Kingshot Developer API",summary:"Authenticated server-to-server API access for Kingshot gift-code redemption."}
 };
 
 export default function LegalApp({type}){
   const key=new URLSearchParams(location.search).get("service");
   const service=services[key]||services["kingshot-manual"];
   const privacy=type==="privacy";
-  const base=key==="developer-api"?"/developers.html":"/";
+  const base="/";
   const serviceKey=key||"kingshot-manual";
   return <div className="app legal-app">
     <header>
@@ -33,7 +32,7 @@ export default function LegalApp({type}){
 
         {privacy?<><h2>What we handle</h2>
         <p>The Kingshot services may process the information needed to provide their features. Depending on the service, this can include Player ID, kingdom ID, player name, avatar URL, submitted gift codes, redemption results, timestamps, and support requests. Auto Redeem also keeps the registration state and processing history needed to prevent duplicate work, track redemption outcomes, and operate the service reliably. The auto-redeem service stores registered player information so scheduled processing can work after you leave the site. Input fields use client-side format checks to catch common mistakes before submission. These checks are a convenience feature, not a privacy or security boundary; the service may also validate submitted data server-side before processing it.</p>
-        {key==="developer-api"&&<><h2>Developer API accounts</h2><p>Developer accounts use Supabase Auth email/password authentication. The service stores the account identifier and email address needed to manage developer keys. Authentication sessions are held in secure, HttpOnly, same-site cookies. API keys are generated with cryptographically secure randomness and only a SHA-256 hash plus a short display prefix is stored; the full secret is shown once at creation and cannot be recovered by the service.</p><h2>Developer API usage</h2><p>Developer API requests are authenticated by the key supplied in the Authorization header. The service records aggregate usage counters, last-use timestamps, and request identifiers needed for quota enforcement, abuse prevention, reliability, and troubleshooting. The upstream Kingshot signing secret is never exposed to developer clients. Do not put developer API keys in browser code, mobile apps, public repositories, or client-side environment variables.</p></>}        <h2>Support requests</h2>
+        }        <h2>Support requests</h2>
         <p>If you submit a request to remove an auto-redeem registration, the Player ID and the reason you provide are processed so an administrator can review the request. Do not include passwords, payment details, authentication codes, or other sensitive information in a support request.</p>
         <h2>Advertising and measurement</h2>
         <p>Some pages may display sponsored banner advertisements. The service records basic ad delivery measurements such as impressions and clicks. Clicking an advertisement may pass through this service's tracking endpoint before you are sent to the advertiser's destination URL. The advertiser's own privacy practices apply after you leave this service.</p>
