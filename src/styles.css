@@ -989,3 +989,6 @@ body,#root{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .manual-submit{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;width:100%;height:50px}
 .manual-submit svg{flex:none}
 @media(max-width:640px){.manual-redeem-form{padding:13px;border-radius:15px;margin-top:22px}.manual-form-head{align-items:flex-start}.manual-form-head h2{font-size:14px}.manual-secure{padding:6px 8px}.manual-fields{grid-template-columns:1fr;gap:8px}.manual-fields .ks-field{min-height:66px}.manual-fields .ks-field small{margin-left:24px}.manual-submit{height:50px}}
+
+
+.register-spinner{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid #ffffff26;border-radius:50%;background:#ffffff0d;flex:none}.register-spinner svg{animation:register-spin .8s linear infinite;transform-origin:center}.ks-submit:disabled{cursor:wait}.ks-submit:disabled .register-spinner{animation:register-pulse 1.4s ease-in-out infinite}@keyframes register-spin{to{transform:rotate(360deg)}}@keyframes register-pulse{0%,100%{opacity:.65}50%{opacity:1}}
