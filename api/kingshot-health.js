@@ -24,102 +24,39 @@ async function count(table){
 }
 
 function safeWorker(row){
- const summary=row?.summary&&typeof row.summary==="object"?row.summary:{};
- return {
-  slot:row?.slot_id??null,
-  status:row?.last_status??null,
-  startedAt:row?.last_started_at??null,
-  finishedAt:row?.last_finished_at??null,
-  error:row?.last_error?String(row.last_error).slice(0,200):null,
-  summary:{
-   players:Number(summary.players||0),
-   attempted:Number(summary.attempted||0),
-   success:Number(summary.success||0),
-   alreadyHandled:Number(summary.alreadyHandled||0),
-   skipped:Number(summary.skipped||0),
-   stale:Number(summary.stale||0),
-   errors:Number(summary.errors||0),
-   redemptionFailures:Array.isArray(summary.redemptionFailures)?summary.redemptionFailures.length:0
-  }
- };
+ const summary=row?.last_summary&&typeof row.last_summary==="object"?row.last_summary:{};
+ return {slot:row?.slot??null,status:row?.last_status??null,startedAt:row?.last_started_at??null,finishedAt:row?.last_finished_at??null,error:row?.last_error?String(row.last_error).slice(0,200):null,summary:{players:Number(summary.players||0),attempted:Number(summary.attempted||0),success:Number(summary.success||0),alreadyHandled:Number(summary.alreadyHandled||0),skipped:Number(summary.skipped||0),stale:Number(summary.stale||0),errors:Number(summary.errors||0),redemptionFailures:Array.isArray(summary.redemptionFailures)?summary.redemptionFailures.length:0}};
 }
 
 function safeScraper(row){
- return {
-  source:row?.source??null,
-  codeCount:Number(row?.code_count||0),
-  consecutiveEmptyRuns:Number(row?.consecutive_empty_runs||0),
-  consecutiveErrors:Number(row?.consecutive_errors||0),
-  lastSuccessAt:row?.last_success_at??null,
-  alertState:row?.alert_state??null,
-  lastError:row?.last_error?String(row.last_error).slice(0,160):null
- };
+ return {source:row?.source??null,codeCount:Number(row?.last_code_count||0),consecutiveEmptyRuns:Number(row?.consecutive_empty_runs||0),consecutiveErrors:Number(row?.consecutive_error_runs||0),lastSuccessAt:row?.last_success_at??null,alertState:row?.alert_state??null,lastError:row?.last_error?String(row.last_error).slice(0,160):null};
 }
 
 async function logsResponse(res){
  const [workers,scrapers,recentRuns,players,giftCodes,redemptions,events,scraperRuns,supportTickets,announcements]=await Promise.all([
-  query("kingshot_worker_slots?select=slot_id,last_status,last_started_at,last_finished_at,last_error,summary&order=slot_id"),
-  query("kingshot_scraper_health?select=source,consecutive_empty_runs,consecutive_errors,code_count,last_success_at,last_error,alert_state&order=source"),
-  query("kingshot_scraper_runs?select=*&order=started_at.desc&limit=20"),
-  count("kingshot_autoredeem"),
-  count("kingshot_gift_codes"),
-  count("kingshot_redemptions"),
-  count("kingshot_player_events"),
-  count("kingshot_scraper_runs"),
-  count("kingshot_support_tickets"),
-  count("kingshot_announcements")
+  query("kingshot_worker_slots?select=slot,last_status,last_started_at,last_finished_at,last_error,last_summary&order=slot"),
+  query("kingshot_scraper_health?select=source,consecutive_empty_runs,consecutive_error_runs,last_code_count,last_success_at,last_error,alert_state&order=source"),
+  query("kingshot_scraper_runs?select=source,checked_at,http_status,code_count,parse_ok,error_category,error_message&order=checked_at.desc&limit=20"),
+  count("kingshot_autoredeem"),count("kingshot_gift_codes"),count("kingshot_redemptions"),count("kingshot_player_events"),count("kingshot_scraper_runs"),count("kingshot_support_tickets"),count("kingshot_announcements")
  ]);
- res.setHeader("Cache-Control","no-store");
- res.setHeader("Content-Type","application/json; charset=utf-8");
- return res.status(200).json({
-  ok:true,
-  service:"kingshot-auto-redeemer",
-  generatedAt:new Date().toISOString(),
-  workers:Array.isArray(workers)?workers.map(safeWorker):[],
-  scrapers:Array.isArray(scrapers)?scrapers.map(safeScraper):[],
-  recentScraperRuns:Array.isArray(recentRuns)?recentRuns.slice(0,20).map(row=>({
-   source:row?.source??null,
-   startedAt:row?.started_at??null,
-   finishedAt:row?.finished_at??null,
-   httpStatus:row?.http_status??null,
-   codeCount:Number(row?.code_count||0),
-   parseOk:row?.parse_ok??null,
-   errorCategory:row?.error_category??null,
-   error:row?.error_message?String(row.error_message).slice(0,160):null
-  })):[],
-  counts:{players,giftCodes,redemptions,playerEvents:events,scraperRuns,supportTickets,announcements}
- });
+ res.setHeader("Cache-Control","no-store");res.setHeader("Content-Type","application/json; charset=utf-8");
+ return res.status(200).json({ok:true,service:"kingshot-auto-redeemer",generatedAt:new Date().toISOString(),workers:Array.isArray(workers)?workers.map(safeWorker):[],scrapers:Array.isArray(scrapers)?scrapers.map(safeScraper):[],recentScraperRuns:Array.isArray(recentRuns)?recentRuns.map(row=>({source:row?.source??null,checkedAt:row?.checked_at??null,httpStatus:row?.http_status??null,codeCount:Number(row?.code_count||0),parseOk:row?.parse_ok??null,errorCategory:row?.error_category??null,error:row?.error_message?String(row.error_message).slice(0,160):null})):[],counts:{players,giftCodes,redemptions,playerEvents:events,scraperRuns,supportTickets,announcements}});
 }
 
 export default async function handler(req,res){
  if(req.method!=="GET")return res.status(405).json({error:"Method not allowed"});
  if(!SUPABASE_KEY)return res.status(503).json({healthy:false,error:"Health service is not configured."});
  try{
-  if(String(req.query?.logs||"") === "1")return await logsResponse(res);
-
-  const r=await fetch(SUPABASE_URL+"/rest/v1/kingshot_worker_state?select=last_started_at,last_finished_at,last_status,lock_until&id=eq.true&limit=1",{
-   headers:{apikey:SUPABASE_KEY,authorization:"Bearer "+SUPABASE_KEY},
-   signal:AbortSignal.timeout(5000)
-  });
+  if(String(req.query?.logs||"")==="1")return await logsResponse(res);
+  const r=await fetch(SUPABASE_URL+"/rest/v1/kingshot_worker_state?select=last_started_at,last_finished_at,last_status,lock_until&id=eq.true&limit=1",{headers:{apikey:SUPABASE_KEY,authorization:"Bearer "+SUPABASE_KEY},signal:AbortSignal.timeout(5000)});
   const rows=await r.json().catch(()=>[]);
   if(!r.ok||!Array.isArray(rows)||!rows[0])return res.status(503).json({healthy:false,error:"Worker state unavailable."});
-  const state=rows[0],now=Date.now();
-  const started=state.last_started_at?Date.parse(state.last_started_at):NaN;
-  const finished=state.last_finished_at?Date.parse(state.last_finished_at):NaN;
-  const ageMs=state.last_status==="RUNNING"&&Number.isFinite(started)?now-started:Number.isFinite(finished)?now-finished:Infinity;
-  const healthy=(state.last_status==="COMPLETED"||state.last_status==="RUNNING")&&ageMs<=12*60*1000;
+  const state=rows[0],now=Date.now(),started=state.last_started_at?Date.parse(state.last_started_at):NaN,finished=state.last_finished_at?Date.parse(state.last_finished_at):NaN,ageMs=state.last_status==="RUNNING"&&Number.isFinite(started)?now-started:Number.isFinite(finished)?now-finished:Infinity,healthy=(state.last_status==="COMPLETED"||state.last_status==="RUNNING")&&ageMs<=12*60*1000;
   res.setHeader("Cache-Control","no-store");
-  return res.status(healthy?200:503).json({
-   healthy,
-   status:String(state.last_status||"UNKNOWN"),
-   lastCompletedAt:state.last_finished_at||null,
-   runningSince:state.last_status==="RUNNING"?state.last_started_at:null,
-   ageSeconds:Number.isFinite(ageMs)?Math.max(0,Math.round(ageMs/1000)):null,
-   locked:Boolean(state.lock_until&&Date.parse(state.lock_until)>now)
-  });
+  return res.status(healthy?200:503).json({healthy,status:String(state.last_status||"UNKNOWN"),lastCompletedAt:state.last_finished_at||null,runningSince:state.last_status==="RUNNING"?state.last_started_at:null,ageSeconds:Number.isFinite(ageMs)?Math.max(0,Math.round(ageMs/1000)):null,locked:Boolean(state.lock_until&&Date.parse(state.lock_until)>now)});
  }catch(error){
   console.error("Health/logs API failed:",error?.message||error);
-  if(String(req.query?.logs||"") === "1")return res.status(502).json({ok:false,error:"Logs temporarily unavailable."});
+  if(String(req.query?.logs||"")==="1")return res.status(502).json({ok:false,error:"Logs temporarily unavailable."});
   return res.status(503).json({healthy:false,error:"Worker health check failed."});
  }
 }

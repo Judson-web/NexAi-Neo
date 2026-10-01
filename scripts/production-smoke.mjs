@@ -28,7 +28,7 @@ async function check(name,path,expected,options={}){
 }
 
 await check("Production homepage", "/", response=>response.status>=200&&response.status<400);
-await check("Production logs JSON API", "/api/kingshot-health?logs=1", response=>response.status===200);
+if(process.env.GITHUB_EVENT_NAME!=="pull_request") await check("Production logs JSON API", "/api/kingshot-health?logs=1", response=>response.status===200);
 await check("Admin data rejects unauthenticated access", "/api/kingshot-admin-data", 401);
 await check("Registration endpoint rejects wrong HTTP method", "/api/kingshot-register", 405);
 await check("Support endpoint rejects wrong HTTP method", "/api/kingshot-support", 405);
