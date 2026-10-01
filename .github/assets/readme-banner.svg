@@ -1,0 +1,31 @@
+<svg width="1200" height="300" viewBox="0 0 1200 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="300" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#0B1020"/>
+    <stop offset="0.55" stop-color="#111A33"/>
+    <stop offset="1" stop-color="#0A1226"/>
+  </linearGradient>
+  <linearGradient id="accent" x1="120" y1="80" x2="1040" y2="230" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#60A5FA"/>
+    <stop offset="1" stop-color="#A78BFA"/>
+  </linearGradient>
+  <filter id="glow"><feGaussianBlur stdDeviation="18" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="1200" height="300" rx="24" fill="url(#bg)"/>
+<circle cx="1010" cy="45" r="120" fill="#3B82F6" opacity=".09"/>
+<circle cx="1080" cy="245" r="170" fill="#8B5CF6" opacity=".08"/>
+<path d="M0 248C220 185 340 285 555 220C760 158 860 175 1200 82" stroke="url(#accent)" stroke-width="2" opacity=".35"/>
+<g filter="url(#glow)" opacity=".9">
+  <circle cx="1010" cy="105" r="4" fill="#60A5FA"/>
+  <circle cx="1060" cy="145" r="3" fill="#A78BFA"/>
+  <circle cx="940" cy="170" r="3" fill="#60A5FA"/>
+</g>
+<rect x="76" y="72" width="64" height="64" rx="18" fill="#172554" stroke="#60A5FA" stroke-opacity=".55"/>
+<path d="M96 89h24c6 0 10 4 10 10v19c0 6-4 10-10 10H96c-6 0-10-4-10-10V99c0-6 4-10 10-10Z" stroke="#93C5FD" stroke-width="4"/>
+<path d="M93 101h30M101 94v10M115 94v10" stroke="#93C5FD" stroke-width="3" stroke-linecap="round"/>
+<text x="166" y="111" fill="white" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="38" font-weight="700">Kingshot Auto Redeemer</text>
+<text x="80" y="181" fill="#CBD5E1" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20">Continuous gift-code discovery • automatic redemption • durable workers</text>
+<text x="80" y="221" fill="#94A3B8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16">Backfill · persistent history · duplicate protection · server-side processing</text>
+<rect x="80" y="245" width="116" height="4" rx="2" fill="#60A5FA"/>
+<rect x="204" y="245" width="68" height="4" rx="2" fill="#A78BFA"/>
+</svg>
