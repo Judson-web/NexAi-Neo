@@ -393,13 +393,9 @@ footer>span:last-child a:hover{color:#fff}
 }
 
 
-.banner-ad-creative{background:var(--ad-bg,#11131a)}
-.banner-ad-creative img{object-fit:contain!important;object-position:center!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:100%!important;max-height:100%!important}
 @media(min-width:681px){
- .ks-app .banner-ad-creative img,.ks-auto-app .banner-ad-creative img{object-fit:contain!important}
 }
 @media(max-width:680px){
- .banner-ad-creative img{object-fit:contain!important}
 }
 
 
