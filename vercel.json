@@ -17,22 +17,6 @@
       "destination": "/redeem.html"
     },
     {
-      "source": "/ks-admin",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/ad-admin",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/api/banner-ads",
-      "destination": "/api/kingshot-admin-data?public=ad"
-    },
-    {
-      "source": "/api/banner-ad-click",
-      "destination": "/api/kingshot-admin-data?public=click"
-    },
-    {
       "source": "/api/discord-avatar",
       "destination": "/api/discord-tools/avatar"
     },
