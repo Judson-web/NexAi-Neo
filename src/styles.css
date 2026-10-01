@@ -974,3 +974,18 @@ body,#root{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .ks-app footer{min-height:72px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:22px 0 calc(28px + env(safe-area-inset-bottom));color:#59616f;font-size:8px;line-height:1.5}
 .ks-app footer>span{min-width:0}.ks-app footer>span:nth-child(2){flex:1}.ks-app footer a{white-space:nowrap}
 @media(max-width:620px){.ks-app footer{align-items:flex-start;gap:8px;padding-top:20px}.ks-app footer>span{width:100%}.ks-app footer>span:nth-child(2){order:3}.ks-app footer .ks-logo{flex:none}}
+
+
+/* Manual redemption form polish */
+.manual-redeem-form{width:min(820px,100%);margin:30px auto 0;padding:18px;border:1px solid #292d37;border-radius:18px;background:linear-gradient(180deg,#11131a,#0c0e13);box-shadow:0 18px 50px #0005;text-align:left}
+.manual-form-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;padding:2px 2px 4px}
+.manual-form-kicker{display:block;color:#6d7180;font-size:8px;font-weight:850;letter-spacing:.16em}
+.manual-form-head h2{margin:5px 0 0;color:#f2eff6;font-size:16px;letter-spacing:-.025em}
+.manual-secure{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid #29362f;border-radius:999px;color:#8fb59c;background:#111a15;font-size:8px;font-weight:750;white-space:nowrap}
+.manual-secure svg{color:#79b18b}
+.manual-fields{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.manual-fields .ks-field{height:auto;min-height:70px;padding:11px 13px}
+.manual-fields .ks-field small{display:block;margin:6px 0 0 24px;color:#555b69;font-size:8px;line-height:1.35}
+.manual-submit{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;width:100%;height:50px}
+.manual-submit svg{flex:none}
+@media(max-width:640px){.manual-redeem-form{padding:13px;border-radius:15px;margin-top:22px}.manual-form-head{align-items:flex-start}.manual-form-head h2{font-size:14px}.manual-secure{padding:6px 8px}.manual-fields{grid-template-columns:1fr;gap:8px}.manual-fields .ks-field{min-height:66px}.manual-fields .ks-field small{margin-left:24px}.manual-submit{height:50px}}
