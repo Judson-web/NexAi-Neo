@@ -1,5 +1,5 @@
-import React from "react";
-import {ArrowLeft, CheckCircle, Clock3, Database, Gift, History, LockKeyhole, RefreshCw, ShieldCheck, Sparkles, Zap} from "lucide-react";
+import React,{useEffect,useState} from "react";
+import {ArrowLeft, CheckCircle, Clock3, Database, Gift, History, LockKeyhole, RefreshCw, Sparkles, Zap, Menu, X} from "lucide-react";
 const KINGSHOT_ICON="https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/ee/d2/22/eed22297-9313-d8b0-52c8-95f42a2795b2/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/0x0ss-85.png";
 function KsLogo(){return <a className="brand ks-brand" href="/"><span className="brand-mark ks-brand-mark"><img src={KINGSHOT_ICON} alt="Kingshot"/></span><span>Kingshot Redeemer</span></a>}
 function DiscordChip(){const [user,setUser]=useState(null);useEffect(()=>{let live=true;fetch("/api/discord-user?id=871756466900598815",{credentials:"same-origin"}).then(r=>r.ok?r.json():null).then(d=>{if(live&&d?.id)setUser(d)}).catch(()=>{});return()=>{live=false}},[]);const avatar=user?.avatar?`/api/discord-avatar?id=${encodeURIComponent(user.id)}&hash=${encodeURIComponent(user.avatar)}&format=${encodeURIComponent(user.animated?"gif":"png")}&size=64`:"https://cdn.discordapp.com/embed/avatars/0.png?size=64";return <a className="admin-credit site-discord-credit" href="https://discord.com/channels/@me/871756466900598815" target="_blank" rel="noreferrer" aria-label="Message Judson on Discord"><img src={avatar} alt="Judson"/><span>Judson</span></a>}
@@ -14,11 +14,12 @@ const sections=[
 ];
 
 function InfoApp(){
+ const [menu,setMenu]=useState(false);
  const goBack=()=>{if(history.length>1)history.back();else location.href="/auto"};
  return <div className="app ks-app info-app">
   <a className="skip-link" href="#main-content">Skip to main content</a>
-  <header><KsLogo/><nav><a href="/auto">Auto Redeem</a><a href="/manual">Manual Redeem</a><a className="active" href="/info">How it works</a></nav><div className="header-right"><DiscordChip/><button className="menu-btn" onClick={()=>{const el=document.querySelector(".info-mobile-menu");el?.classList.toggle("open")}} aria-label="Menu">☰</button></div></header>
-  <div className="info-mobile-menu"><a href="/auto">Auto Redeem</a><a href="/manual">Manual Redeem</a><a href="/info">How it works</a></div>
+  <header><KsLogo/><nav><a href="/auto">Auto Redeem</a><a href="/manual">Manual Redeem</a><a className="active" href="/info">How it works</a></nav><div className="header-right"><DiscordChip/><button className="menu-btn" onClick={()=>setMenu(v=>!v)} aria-label="Menu">{menu?<X size={18}/>:<Menu size={18}/>}</button></div></header>
+  {menu&&<div className="info-mobile-menu"><a href="/auto" onClick={()=>setMenu(false)}>Auto Redeem</a><a href="/manual" onClick={()=>setMenu(false)}>Manual Redeem</a><a href="/info" onClick={()=>setMenu(false)}>How it works</a></div>}
   <main id="main-content">
    <section className="info-hero"><button className="info-back" onClick={goBack}><ArrowLeft size={14}/> Back</button><div className="eyebrow"><span/>ABOUT THE SERVICE</div><h1>How Kingshot<br/><em>Auto Redeem works.</em></h1><p className="hero-copy">A plain-English guide to the features behind the service, from code discovery and backfill to redemption history and protection.</p></section>
    <section className="info-flow"><div className="section-title"><span>01</span><h2>The basic flow.</h2></div><div className="info-steps"><article><b>01</b><div><strong>Register your player</strong><p>Your Player ID is looked up so the current kingdom can be associated with the registration.</p></div></article><article><b>02</b><div><strong>Codes enter the active pool</strong><p>Public code sources are checked and normalized. Codes that are known to be expired are excluded.</p></div></article><article><b>03</b><div><strong>Workers process eligible players</strong><p>Registered players are distributed across a durable worker pool. Each worker processes its assigned shard concurrently.</p></div></article><article><b>04</b><div><strong>Results are remembered</strong><p>Each player/code attempt is claimed and recorded, preventing duplicate work while preserving the redemption result.</p></div></article></div></section>
