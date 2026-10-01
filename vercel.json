@@ -13,10 +13,6 @@
       "destination": "/manual.html"
     },
     {
-      "source": "/developers",
-      "destination": "/developers.html"
-    },
-    {
       "source": "/redeem",
       "destination": "/redeem.html"
     },
@@ -35,14 +31,6 @@
     {
       "source": "/api/banner-ad-click",
       "destination": "/api/kingshot-admin-data?public=click"
-    },
-    {
-      "source": "/api/developer-auth",
-      "destination": "/api/developer/auth"
-    },
-    {
-      "source": "/api/developer-keys",
-      "destination": "/api/developer/keys"
     },
     {
       "source": "/api/discord-avatar",
