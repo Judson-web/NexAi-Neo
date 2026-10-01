@@ -16,6 +16,18 @@ const adminData=read("api/kingshot-admin-data.js");
 const adminLogin=read("api/kingshot-admin-login.js");
 const discordInteractions=read("api/discord-interactions.js");
 const health=read("api/kingshot-health.js");
+const logs=read("api/kingshot-health.js");
+
+assertCheck("Logs API is GET-only and server-side",
+ logs.includes('if(req.method!=="GET")') &&
+ logs.includes("SUPABASE_SERVICE_ROLE_KEY") &&
+ !logs.includes("SUPABASE_ANON_KEY"));
+assertCheck("Logs API returns sanitized operational data only",
+ logs.includes("safeWorker") &&
+ logs.includes("safeScraper") &&
+ logs.includes("redemptionFailures:Array.isArray(summary.redemptionFailures)") &&
+ !logs.includes("player_id"));
+
 
 assertCheck(
  "Worker keeps the handled-status terminal set",
