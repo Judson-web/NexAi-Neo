@@ -1,10 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/",
-      "destination": "/auto.html"
-    },
-    {
       "source": "/auto",
       "destination": "/auto.html"
     },
