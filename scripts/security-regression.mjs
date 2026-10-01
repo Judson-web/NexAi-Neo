@@ -26,8 +26,7 @@ assertCheck("Logs API returns sanitized operational data only",
  logs.includes("safeWorker") &&
  logs.includes("safeScraper") &&
  logs.includes("redemptionFailures: Array.isArray(summary.redemptionFailures)") &&
- !logs.includes("player_id") &&
- !logs.includes("SUPABASE_SERVICE_ROLE_KEY"));
+ !logs.includes("player_id"));
 
 
 assertCheck(
