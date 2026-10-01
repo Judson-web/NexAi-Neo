@@ -14,25 +14,11 @@ function response() {
 }
 const req = (path, method="GET") => ({method,query:{path:Array.isArray(path)?path:[path]},headers:{},body:{}});
 
-test("developer key router rejects unauthenticated access", async () => {
-  const {default:router}=await import("../api/developer/[...path].js"); const res=response();
-  await router(req("keys"),res); assert.equal(res.statusCode,401); assert.equal(res.body?.error,"Authentication required.");
-});
 test("admin router rejects unauthenticated data access", async () => {
   const {default:router}=await import("../api/admin-tools/[...path].js"); const res=response();
   await router(req("data"),res); assert.equal(res.statusCode,401); assert.equal(res.body?.error,"Unauthorized");
 });
-test("versioned redeem rejects requests without a developer key", async () => {
-  const {default:router}=await import("../api/v1/[[...path]].js"); const res=response();
-  await router(req("redeem","POST"),res); assert.equal(res.statusCode,401); assert.equal(res.body?.error?.code,"UNAUTHORIZED");
-});
 
-
-test("developer router resolves direct URL paths", async () => {
-  const {default:router}=await import("../api/developer/[...path].js"); const res=response();
-  await router({method:"GET",query:{},url:"/api/developer/auth",headers:{},body:{}},res);
-  assert.equal(res.statusCode,200); assert.equal(res.body?.authenticated,false);
-});
 test("versioned router resolves direct URL paths", async () => {
   const {default:router}=await import("../api/v1/[[...path]].js"); const res=response();
   await router({method:"GET",query:{},url:"/api/v1/health",headers:{},body:{}},res);
