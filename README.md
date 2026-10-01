@@ -142,6 +142,26 @@ The automatic redemption path currently uses:
 
 The architecture is intentionally server-side: privileged Supabase operations and redemption signing credentials are never exposed to the public frontend.
 
+## Automatic redemption — permitted use and strict rules
+
+Auto Redeem is an intentional feature of this project. It is designed to automate ordinary gift-code redemption for Player IDs that the user is authorized to use. Automation itself is permitted; abuse of the automation is not.
+
+By using the automatic redemption flow, you agree to these rules:
+
+- **Only use authorized Player IDs.** Do not register another person's account or Player ID without their permission.
+- **No credential abuse.** Never submit, request, collect, share, or attempt to discover passwords, session tokens, authentication codes, signing secrets, or other private credentials.
+- **No quota bypassing.** Do not evade rate limits, worker limits, cooldowns, API restrictions, duplicate-prevention controls, or other safeguards by rotating identities, keys, IP addresses, accounts, or requests.
+- **No flooding or spam.** Do not intentionally generate excessive redemption requests, duplicate jobs, repeated retries, or traffic intended to degrade the service or the upstream game systems.
+- **No scraping for abuse.** Public code discovery is used to find legitimate gift codes; do not use the service to harvest private data, enumerate accounts, probe protected endpoints, or collect information unrelated to redemption.
+- **No unauthorized automation against third parties.** Do not use this project to automate actions on accounts, services, or infrastructure that you do not have permission to operate.
+- **No manipulation of redemption outcomes.** Do not tamper with requests, signatures, claims, worker coordination, API responses, or stored state to obtain rewards outside the normal redemption process.
+- **No malicious integrations.** Developer API integrations must remain server-side and must not be used for malware, credential theft, phishing, fraud, harassment, denial-of-service activity, or attempts to compromise the service or upstream systems.
+- **Respect upstream rules.** Kingshot/third-party services may impose their own terms, limits, eligibility rules, and technical restrictions. This project does not override them.
+- **Keep keys private.** Developer API keys are credentials. Store them server-side, rotate or revoke them if exposed, and never commit them to source control or ship them to clients.
+- **Respect service controls.** We may throttle, suspend, revoke, or block registrations, API keys, IPs, or other access where necessary to protect users, the service, or upstream systems.
+
+A normal personal or community integration that periodically checks for eligible public gift codes and redeems them for an authorized Player ID is within the intended use of Auto Redeem. The fact that an action is automated does not by itself make it abusive; behavior that bypasses safeguards, exceeds reasonable use, or targets accounts or systems without authorization is prohibited.
+
 ## Developer API
 
 The service also exposes a versioned API for third-party Kingshot tools, bots, and websites. Developers call the API instead of implementing the Kingshot signing flow themselves; the upstream signing secret remains server-side.
