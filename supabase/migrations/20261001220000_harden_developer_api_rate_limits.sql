@@ -53,13 +53,13 @@ begin
       set request_count = request_count - 1, updated_at = pg_catalog.now()
       where api_key_id = k.id;
     return query select k.id,k.name,k.requests_per_minute,k.daily_limit,k.total_requests,
-      coalesce((select u.request_count from public.kingshot_api_usage u where u.api_key_id=k.id and u.usage_date=pg_catalog.current_date),0),
+      coalesce((select u.request_count from public.kingshot_api_usage u where u.api_key_id=k.id and u.usage_date=current_date),0),
       minute_used - 1,k.last_used_at,false,true;
     return;
   end if;
 
   insert into public.kingshot_api_usage(api_key_id, usage_date, request_count)
-  values (k.id, pg_catalog.current_date, 1)
+  values (k.id, current_date, 1)
   on conflict (api_key_id, usage_date)
   do update set request_count = public.kingshot_api_usage.request_count + 1, updated_at = pg_catalog.now()
   returning request_count into used;
@@ -67,7 +67,7 @@ begin
   if used > k.daily_limit then
     update public.kingshot_api_usage u
       set request_count = u.request_count - 1, updated_at = pg_catalog.now()
-      where u.api_key_id=k.id and u.usage_date=pg_catalog.current_date;
+      where u.api_key_id=k.id and u.usage_date=current_date;
     update public.kingshot_api_rate_limits
       set request_count = request_count - 1, updated_at = pg_catalog.now()
       where api_key_id=k.id;
