@@ -33,6 +33,7 @@ function safeScraper(row){
 }
 
 async function logsResponse(res){
+ const generatedAt=new Date().toISOString();
  const [workers,scrapers,recentRuns,players,giftCodes,redemptions,events,scraperRuns,supportTickets,announcements]=await Promise.all([
   query("kingshot_worker_slots?select=slot,last_status,last_started_at,last_finished_at,last_error,last_summary&order=slot"),
   query("kingshot_scraper_health?select=source,consecutive_empty_runs,consecutive_error_runs,last_code_count,last_success_at,last_error,alert_state&order=source"),
@@ -40,7 +41,7 @@ async function logsResponse(res){
   count("kingshot_autoredeem"),count("kingshot_gift_codes"),count("kingshot_redemptions"),count("kingshot_player_events"),count("kingshot_scraper_runs"),count("kingshot_support_tickets"),count("kingshot_announcements")
  ]);
  res.setHeader("Cache-Control","no-store");res.setHeader("Content-Type","application/json; charset=utf-8");
- return res.status(200).json({ok:true,service:"kingshot-auto-redeemer",generatedAt:new Date().toISOString(),workers:Array.isArray(workers)?workers.map(safeWorker):[],scrapers:Array.isArray(scrapers)?scrapers.map(safeScraper):[],recentScraperRuns:Array.isArray(recentRuns)?recentRuns.map(row=>({source:row?.source??null,checkedAt:row?.checked_at??null,httpStatus:row?.http_status??null,codeCount:Number(row?.code_count||0),parseOk:row?.parse_ok??null,errorCategory:row?.error_category??null,error:row?.error_message?String(row.error_message).slice(0,160):null})):[],counts:{players,giftCodes,redemptions,playerEvents:events,scraperRuns,supportTickets,announcements}});
+ return res.status(200).json({ok:true,service:"kingshot-auto-redeemer",generatedAt,workers:Array.isArray(workers)?workers.map(safeWorker):[],scrapers:Array.isArray(scrapers)?scrapers.map(safeScraper):[],recentScraperRuns:Array.isArray(recentRuns)?recentRuns.map(row=>({source:row?.source??null,checkedAt:row?.checked_at??null,httpStatus:row?.http_status??null,codeCount:Number(row?.code_count||0),parseOk:row?.parse_ok??null,errorCategory:row?.error_category??null,error:row?.error_message?String(row.error_message).slice(0,160):null})):[],counts:{players,giftCodes,redemptions,playerEvents:events,scraperRuns,supportTickets,announcements}});
 }
 
 export default async function handler(req,res){
