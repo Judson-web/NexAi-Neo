@@ -12,9 +12,9 @@
 [![Vite 6](https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase&logoColor=111827)](https://supabase.com/)
 [![Vercel](https://img.shields.io/badge/Vercel-Production-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com/)
-[![Guardrails](https://github.com/Judson-web/NexAi-Neo/actions/workflows/guardrails.yml/badge.svg)](https://github.com/Judson-web/NexAi-Neo/actions/workflows/guardrails.yml)
+[![Guardrails](https://github.com/Judson-web/kingshot-auto-redeemer/actions/workflows/guardrails.yml/badge.svg)](https://github.com/Judson-web/kingshot-auto-redeemer/actions/workflows/guardrails.yml)
 
-[**Open the website →**](https://kingshot-autoredeemer.vercel.app/) · [**How it works →**](https://kingshot-autoredeemer.vercel.app/info) · [**Report an issue →**](https://github.com/Judson-web/NexAi-Neo/issues)
+[**Open the website →**](https://kingshot-autoredeemer.vercel.app/) · [**How it works →**](https://kingshot-autoredeemer.vercel.app/info) · [**Report an issue →**](https://github.com/Judson-web/kingshot-auto-redeemer/issues)
 
 </div>
 
@@ -226,4 +226,4 @@ Changes affecting redemption behavior, database functions, worker coordination, 
 
 ## License
 
-No open-source license has been declared for this repository. Unless a license is added, the source should not be assumed to be freely reusable or redistributed.
+This project is licensed under the [MIT License](./LICENSE).
