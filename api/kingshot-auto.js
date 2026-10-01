@@ -510,8 +510,9 @@ export default async function handler(req,res){
    code:String(row?.code||"").trim(),
    expiresAt:null,
    createdAt:row?.source_date?Date.parse(String(row.source_date)):Date.parse(String(row?.first_seen_at||"")),
-   source:"admin"
-  })).filter(row=>isLikelyGiftCode(row.code));
+   source:"admin",
+   adminAdded:Boolean(row?.admin_added)
+  })).filter(row=>row.code&&row.code.length>=6&&row.code.length<=32);
   const codes=mergeCodes([apiCodes,pageCodes,publicCodes,VERIFIED_FALLBACK_CODES,adminCodes]);
   if(!codes.length)throw Error("Kingshot gift-code sources returned no active codes.");
   console.log("Kingshot auto feed:",{apiActive:data?.data?.activeCount??null,apiCodes:apiCodes.map(x=>x.code),pageCodes:pageCodes.map(x=>x.code),publicSources:publicCodes.map(x=>({code:x.code,source:x.source})),adminCodes:adminCodes.map(x=>x.code),merged:codes.map(x=>x.code)});
