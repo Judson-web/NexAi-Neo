@@ -267,7 +267,7 @@ async function ensureCurrentKingdom(player){
   const fresh=await fetchCurrentKingshotPlayer(player.player_id);
   if(fresh.notFound){
    await rpc("mark_kingshot_player_stale",{p_player_id:player.player_id,p_reason:"MIGHTPULSE_PLAYER_NOT_FOUND"});
-   await sendDiscordEvent({title:"⚠️ Player marked stale",description:"MightPulse could not find this registered Kingshot player.",fields:[{name:"Player ID",value:String(player.player_id),inline:true},{name:"Last kingdom",value:String(player.kingdom_id||"Unknown"),inline:true}],color:0xFEE75C});
+   await sendDiscordEvent({title:"🗑️ Deleted Kingshot account filtered",description:"The scheduled kingdom-reset revalidation could not find this registered player. The registration is now stale and excluded from future auto-redeem cycles.",fields:[{name:"Player ID",value:String(player.player_id),inline:true},{name:"Last kingdom",value:String(player.kingdom_id||"Unknown"),inline:true},{name:"Check",value:"Reset-cycle player revalidation",inline:true}],color:0xFEE75C});
    return {stale:true};
   }
   const p=fresh.player||{};
