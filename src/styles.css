@@ -968,3 +968,9 @@ body,#root{-webkit-text-size-adjust:100%;text-size-adjust:100%}
  .ks-app .section-title h2{font-size:17px}
  .info-app header,.legal-app header,.legal-app footer{width:calc(100% - 24px)}
 }
+
+
+/* Footer stability pass */
+.ks-app footer{min-height:72px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:22px 0 calc(28px + env(safe-area-inset-bottom));color:#59616f;font-size:8px;line-height:1.5}
+.ks-app footer>span{min-width:0}.ks-app footer>span:nth-child(2){flex:1}.ks-app footer a{white-space:nowrap}
+@media(max-width:620px){.ks-app footer{align-items:flex-start;gap:8px;padding-top:20px}.ks-app footer>span{width:100%}.ks-app footer>span:nth-child(2){order:3}.ks-app footer .ks-logo{flex:none}}
