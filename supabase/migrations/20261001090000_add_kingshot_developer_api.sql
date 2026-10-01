@@ -42,8 +42,8 @@ declare
   k public.kingshot_api_keys%rowtype;
   used integer;
 begin
-  select * into k from public.kingshot_api_keys
-   where key_hash = p_key_hash and active = true for update;
+  select k0.* into k from public.kingshot_api_keys k0
+   where k0.key_hash = p_key_hash and k0.active = true for update;
   if not found then return; end if;
 
   insert into public.kingshot_api_usage(api_key_id, usage_date, request_count)
@@ -53,17 +53,17 @@ begin
   returning request_count into used;
 
   if used > k.daily_limit then
-    update public.kingshot_api_usage
-       set request_count = request_count - 1, updated_at = now()
-     where api_key_id = k.id and usage_date = current_date;
+    update public.kingshot_api_usage u
+       set request_count = u.request_count - 1, updated_at = now()
+     where u.api_key_id = k.id and u.usage_date = current_date;
     return query select k.id,k.name,k.requests_per_minute,k.daily_limit,k.total_requests,
                          k.daily_limit,k.last_used_at,false;
     return;
   end if;
 
-  update public.kingshot_api_keys
-     set total_requests=total_requests+1,last_used_at=now(),updated_at=now()
-   where id=k.id;
+  update public.kingshot_api_keys t
+     set total_requests=t.total_requests+1,last_used_at=now(),updated_at=now()
+   where t.id=k.id;
 
   return query select k.id,k.name,k.requests_per_minute,k.daily_limit,k.total_requests+1,
                        used,now(),true;
