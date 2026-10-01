@@ -24,7 +24,7 @@
 
 Kingshot Auto Redeemer is a server-side automation service for eligible Kingshot gift codes. It supports continuous discovery, automatic redemption, manual redemption, and backfill for codes that were legitimately missed.
 
-The same redemption core powers the public website and the Developer API, while privileged signing material remains server-side.
+The same redemption core powers the public website and the auto-redeem worker system, while privileged signing material remains server-side.
 
 ## What you can build
 
@@ -74,13 +74,13 @@ Upstream rate-limit, login, and player errors may also be recorded.
 
 Automation is permitted. Abuse is not.
 
-Use only authorized Player IDs and legitimate public gift codes. Do not use the service or API to bypass quotas, evade authentication, flood requests, generate duplicate work intentionally, probe protected endpoints, harvest private data, manipulate redemption requests or results, or automate accounts/services without authorization.
+Use only authorized Player IDs and legitimate public gift codes. Do not use the service to bypass quotas, evade authentication, flood requests, generate duplicate work intentionally, probe protected endpoints, harvest private data, manipulate redemption requests or results, or automate accounts/services without authorization.
 
 We may throttle, suspend, revoke, or block access when necessary to protect users, the service, or upstream systems.
 
 ## Architecture and infrastructure
 
-The application uses Vercel for deployment and Supabase/PostgreSQL for persistent state. Privileged operations, worker coordination, authentication, API key management, and redemption signing remain server-side.
+The application uses Vercel for deployment and Supabase/PostgreSQL for persistent state. Privileged operations, worker coordination, authentication, and redemption signing remain server-side.
 
 The repository contains security regression checks, production smoke tests, worker health checks, API guardrails, and database privilege checks.
 
