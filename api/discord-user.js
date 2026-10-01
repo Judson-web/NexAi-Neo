@@ -1,6 +1,6 @@
 export default async function handler(req,res){
   res.setHeader("Allow","GET");
-  res.setHeader("Cache-Control","public, s-maxage=300, stale-while-revalidate=600");
+  res.setHeader("Cache-Control","no-store, max-age=0");
   if(req.method!=="GET")return res.status(405).json({error:"Method not allowed."});
   const id=String(req.query.id||"").trim();
   if(!/^\d{15,22}$/.test(id))return res.status(400).json({error:"Enter a valid Discord user ID."});
