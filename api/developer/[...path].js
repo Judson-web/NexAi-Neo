@@ -1,0 +1,1 @@
+import auth from"../../internal/developer-auth.js";import keys from"../../internal/developer-keys.js";export default async function handler(req,res){const p=Array.isArray(req.query?.path)?req.query.path.join("/"):String(req.query?.path||"");if(p==="auth")return auth(req,res);if(p==="keys")return keys(req,res);return res.status(404).json({error:"Developer endpoint not found."})}
