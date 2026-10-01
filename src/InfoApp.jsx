@@ -15,11 +15,28 @@ const sections=[
 
 function InfoApp(){
  const [menu,setMenu]=useState(false);
+ const closeMenu=()=>setMenu(false);
  const goBack=()=>{if(history.length>1)history.back();else location.href="/auto"};
+ useEffect(()=>{
+  if(!menu)return;
+  const onKey=e=>{if(e.key==="Escape")closeMenu()};
+  document.addEventListener("keydown",onKey);
+  const previous=document.body.style.overflow;
+  document.body.style.overflow="hidden";
+  return()=>{document.removeEventListener("keydown",onKey);document.body.style.overflow=previous};
+ },[menu]);
  return <div className="app ks-app info-app">
   <a className="skip-link" href="#main-content">Skip to main content</a>
-  <header><KsLogo/><nav><a href="/auto">Auto Redeem</a><a href="/manual">Manual Redeem</a><a className="active" href="/info">How it works</a></nav><div className="header-right"><DiscordChip/><button className="menu-btn" onClick={()=>setMenu(v=>!v)} aria-label="Menu">{menu?<X size={18}/>:<Menu size={18}/>}</button></div></header>
-  {menu&&<div className="info-mobile-menu"><a href="/auto" onClick={()=>setMenu(false)}>Auto Redeem</a><a href="/manual" onClick={()=>setMenu(false)}>Manual Redeem</a><a href="/info" onClick={()=>setMenu(false)}>How it works</a></div>}
+  <header><KsLogo/><nav><a href="/auto">Auto Redeem</a><a href="/manual">Manual Redeem</a><a className="active" href="/info">How it works</a></nav><div className="header-right"><DiscordChip/><button className="menu-btn" onClick={()=>setMenu(v=>!v)} aria-label={menu?"Close menu":"Open menu"} aria-expanded={menu} aria-controls="info-mobile-drawer">{menu?<X size={18}/>:<Menu size={18}/>}</button></div></header>
+  {menu&&<>
+   <button className="info-menu-backdrop" type="button" aria-label="Close menu" onClick={closeMenu}/>
+   <nav className="info-mobile-menu" id="info-mobile-drawer" aria-label="Mobile navigation">
+    <div className="info-drawer-head"><span>MENU</span><button type="button" onClick={closeMenu} aria-label="Close menu"><X size={15}/></button></div>
+    <a href="/auto" onClick={closeMenu}>Auto Redeem<span>Hands-off gift-code processing</span></a>
+    <a href="/manual" onClick={closeMenu}>Manual Redeem<span>Submit a specific gift code</span></a>
+    <a className="active" href="/info" onClick={closeMenu}>How it works<span>See how the service operates</span></a>
+   </nav>
+  </>}
   <main id="main-content">
    <section className="info-hero"><button className="info-back" onClick={goBack}><ArrowLeft size={14}/> Back</button><div className="eyebrow"><span/>ABOUT THE SERVICE</div><h1>How Kingshot<br/><em>Auto Redeem works.</em></h1><p className="hero-copy">A plain-English guide to the features behind the service, from code discovery and backfill to redemption history and protection.</p></section>
    <section className="info-flow"><div className="section-title"><span>01</span><h2>The basic flow.</h2></div><div className="info-steps"><article><b>01</b><div><strong>Register your player</strong><p>Your Player ID is looked up so the current kingdom can be associated with the registration.</p></div></article><article><b>02</b><div><strong>Codes enter the active pool</strong><p>Public code sources are checked and normalized. Codes that are known to be expired are excluded.</p></div></article><article><b>03</b><div><strong>Workers process eligible players</strong><p>Registered players are distributed across a durable worker pool. Each worker processes its assigned shard concurrently.</p></div></article><article><b>04</b><div><strong>Results are remembered</strong><p>Each player/code attempt is claimed and recorded, preventing duplicate work while preserving the redemption result.</p></div></article></div></section>
