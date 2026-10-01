@@ -1,4 +1,5 @@
 import React,{useEffect,useState}from"react";
+import{createRoot}from"react-dom/client";
 import{Check,CheckCircle,Copy,ExternalLink,KeyRound,LoaderCircle,LogOut,ShieldCheck,Terminal,Trash2}from"lucide-react";
 import"./developer.css";
 
@@ -24,3 +25,6 @@ export default function DevelopersApp(){const[user,setUser]=useState(null),[keys
  useEffect(()=>{load()},[]);
  const logout=async()=>{await fetch("/api/developer-auth",{method:"DELETE",credentials:"same-origin"}).catch(()=>{});setUser(null);setKeys([])};
  return <div className="dev-app"><Header user={user} onLogout={logout}/>{loading?<div className="dev-auth-wrap"><LoaderCircle className="spin" size={24}/></div>:!user?<Auth onAuthed={u=>{setUser(u);load()}}/>:<><main className="dev-main"><div className="dev-shell"><section className="dev-hero"><div><div className="dev-eyebrow"><i/> DEVELOPER PLATFORM</div><h1>Build on<br/><em>Kingshot.</em></h1><p className="dev-copy">A professional server-side API for Kingshot gift-code redemption. Create keys, integrate once, and keep the game credentials safely behind your own backend.</p></div><div className="dev-hero-card"><small>API BASE URL</small><div className="dev-base-url">{API_BASE}</div><div className="dev-notice"><ShieldCheck size={13}/> Independent community API · not an official Century Games API.</div></div></section>{error&&<div className="dev-alert">{error}</div>}<Keys keys={keys} onRefresh={async()=>{const r=await fetch("/api/developer-keys",{credentials:"same-origin",cache:"no-store"});const d=await r.json();if(r.ok)setKeys(d.keys||[]);}}/><Docs/></div></main><footer className="dev-footer"><div className="dev-shell">Kingshot Auto Redeem · Developer API · <a href="/terms?service=kingshot-auto">Terms</a> · <a href="/privacy?service=kingshot-auto">Privacy</a> · <a href="/info">Service information</a></div></footer></>}</div>}
+
+
+createRoot(document.getElementById("root")).render(<DevelopersApp/>);
