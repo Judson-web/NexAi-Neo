@@ -1,4 +1,4 @@
-import {rateLimit}from"../lib/request-rate-limit.js";
+import {rateLimit}from"../../lib/request-rate-limit.js";
 
 const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
 const SUPABASE_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY;
