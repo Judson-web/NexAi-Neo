@@ -870,3 +870,71 @@ footer>span:last-child a:hover{color:#fff}
  .ks-app .ks-register-field{padding:10px 12px}
  .ks-app .ks-register-field small{margin-left:26px}
 }
+
+
+/* Auto Redeem page — focused responsive redesign */
+.ks-app main{overflow:visible}
+.ks-app .ks-auto-hero{width:min(860px,100%);margin:0 auto;padding:76px 0 48px;text-align:center}
+.ks-app .ks-auto-hero .eyebrow{justify-content:center}
+.ks-app .ks-auto-hero h1{margin:20px 0 18px;font-size:clamp(48px,7vw,78px);line-height:.94;letter-spacing:-.075em}
+.ks-app .ks-auto-hero .hero-copy{width:min(620px,100%);margin:0 auto;color:#777e8c;font-size:12px;line-height:1.7}
+.ks-app .ks-register-box{width:min(760px,100%);margin:30px auto 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;text-align:left}
+.ks-app .ks-register-field{min-width:0;padding:12px 13px;border:1px solid #292a32;border-radius:13px;background:linear-gradient(145deg,#111218,#0d0f14);box-shadow:0 10px 30px #0003}
+.ks-app .ks-register-field label{display:block;margin:0 0 7px;color:#626773;font-size:7px;font-weight:850;letter-spacing:.16em}
+.ks-app .ks-register-field>div{display:flex;align-items:center;gap:9px}
+.ks-app .ks-register-field svg{flex:none;color:#8b8495}
+.ks-app .ks-register-field input{width:100%;min-width:0;height:24px;border:0;outline:0;background:transparent;color:#fff;font-size:13px}
+.ks-app .ks-register-field input::placeholder{color:#555b69}
+.ks-app .ks-register-field small{display:block;margin:7px 0 0 26px;color:#5b606c;font-size:8px;line-height:1.45}
+.ks-app .ks-register-box>.ks-submit{min-width:205px;height:100%;min-height:70px;align-self:stretch}
+.ks-app .ks-error,.ks-app .ks-registered{width:min(760px,100%);box-sizing:border-box}
+.ks-app .ks-error{margin:14px auto 0}
+.ks-app .ks-registered{margin:12px auto 0;padding:15px;border-radius:15px;box-shadow:0 12px 34px #0003}
+.ks-app .ks-registered-head{padding:2px 2px 12px}
+.ks-app .ks-registered-row{min-height:58px;padding:10px 3px}
+.ks-app .ks-avatar{width:40px;height:40px;border-radius:11px}
+.ks-app .ks-support{width:min(760px,100%);margin:24px auto 0;padding:20px;border:1px solid #242730;border-radius:16px;background:linear-gradient(145deg,#101218,#0c0e13);box-shadow:0 14px 40px #0003;box-sizing:border-box}
+.ks-app .ks-support .section-title{margin-bottom:12px}
+.ks-app .ks-support-copy{max-width:620px;margin:-4px 0 17px;color:#737a88;font-size:10px;line-height:1.65}
+.ks-app .ks-support-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr) auto;gap:8px;align-items:stretch}
+.ks-app .ks-support-form .ks-register-field{height:54px;min-height:54px;padding:9px 12px}
+.ks-app .ks-support-form .ks-register-field small{display:none}
+.ks-app .ks-support-reason{display:block;min-width:0}
+.ks-app .ks-support-reason>span{display:block;margin:0 0 6px;color:#626773;font-size:7px;font-weight:850;letter-spacing:.16em}
+.ks-app .ks-support-reason textarea{display:block;width:100%;height:54px;min-height:54px;resize:vertical;padding:11px;border:1px solid #292a32;border-radius:11px;outline:0;background:#101116;color:#fff;font:10px inherit;box-sizing:border-box}
+.ks-app .ks-support-reason textarea::placeholder{color:#555b69}
+.ks-app .ks-support-form .ks-submit{height:54px;min-width:145px;white-space:nowrap}
+.ks-app .ks-support-success{margin-top:10px}
+.ks-app .ks-auto-how{width:min(100%,980px);margin:0 auto;padding:34px 0 82px}
+.ks-app .ks-auto-how .section-title{margin-bottom:16px}
+.ks-app .ks-auto-how .feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.ks-app .ks-auto-how .feature-grid article{min-width:0;padding:19px;border:1px solid #20232d;border-radius:15px;background:linear-gradient(145deg,#101218,#0b0d12);box-shadow:0 10px 30px #0002}
+.ks-app .ks-auto-how .feature-grid article>svg{width:20px;height:20px;margin-bottom:18px;color:#d5a85c}
+.ks-app .ks-auto-how .feature-grid article b{display:block;font-size:11px;line-height:1.4;color:#e7e4eb}
+.ks-app .ks-auto-how .feature-grid article p{margin:7px 0 0;color:#707786;font-size:9px;line-height:1.65}
+.ks-app .ks-profile-slides{border-radius:11px}
+.ks-app .ks-profile-slide-meta{padding-top:8px}
+@media(max-width:800px){
+ .ks-app .ks-auto-hero{padding:58px 0 42px}
+ .ks-app .ks-auto-hero h1{font-size:clamp(42px,10vw,62px)}
+ .ks-app .ks-register-box{grid-template-columns:1fr}
+ .ks-app .ks-register-box>.ks-submit{min-height:50px;height:50px;width:100%}
+ .ks-app .ks-support-form{grid-template-columns:1fr}
+ .ks-app .ks-support-form .ks-register-field,.ks-app .ks-support-reason textarea,.ks-app .ks-support-form .ks-submit{height:50px;min-height:50px}
+ .ks-app .ks-auto-how{padding:28px 0 68px}
+ .ks-app .ks-auto-how .feature-grid{grid-template-columns:1fr}
+ .ks-app .ks-auto-how .feature-grid article{padding:16px}
+ .ks-app .ks-auto-how .feature-grid article>svg{margin-bottom:12px}
+}
+@media(max-width:520px){
+ .ks-app .ks-auto-hero{padding:46px 0 34px;text-align:left}
+ .ks-app .ks-auto-hero .eyebrow{justify-content:flex-start}
+ .ks-app .ks-auto-hero h1{font-size:clamp(38px,11.5vw,52px);line-height:.93;margin:16px 0 14px}
+ .ks-app .ks-auto-hero .hero-copy{font-size:11px;line-height:1.65}
+ .ks-app .ks-register-box{margin-top:21px}
+ .ks-app .ks-register-field{padding:11px 12px}
+ .ks-app .ks-register-field small{font-size:8px}
+ .ks-app .ks-support{padding:15px;margin-top:20px;border-radius:14px}
+ .ks-app .ks-support .section-title h2{font-size:19px}
+ .ks-app .ks-auto-how .feature-grid article{border-radius:13px}
+}
