@@ -3,7 +3,6 @@ import React from "react";
 const services={
   "kingshot-manual":{label:"Kingshot Manual Redeemer",summary:"Manual gift-code redemption for a Kingshot Player ID."},
   "kingshot-auto":{label:"Kingshot Auto Redeem",summary:"Registration and automatic processing of active Kingshot gift codes."},
-  "discord-pfp":{label:"Discord PFP Extractor",summary:"Lookup and download tool for publicly available Discord profile avatar data."},
   "developer-api":{label:"Kingshot Developer API",summary:"Authenticated server-to-server API access for Kingshot gift-code redemption."}
 };
 
@@ -11,7 +10,7 @@ export default function LegalApp({type}){
   const key=new URLSearchParams(location.search).get("service");
   const service=services[key]||services["kingshot-manual"];
   const privacy=type==="privacy";
-  const base=key==="discord-pfp"?"/extract":key==="developer-api"?"/developers.html":"/";
+  const base=key==="developer-api"?"/developers.html":"/";
   const serviceKey=key||"kingshot-manual";
   return <div className="app legal-app">
     <header>
