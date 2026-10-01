@@ -24,12 +24,12 @@ async function count(table){
 }
 
 function safeWorker(row){
- const summary=row?.summary&&typeof row.summary==="object"?row.summary:{};
+ const summary=row?.last_summary&&typeof row.summary==="object"?row.summary:{};
  return {
-  slot:row?.slot_id??null,
+  slot:row?.slot??null,
   status:row?.last_status??null,
-  startedAt:row?.last_started_at??null,
-  finishedAt:row?.last_finished_at??null,
+  startedAt:row?.last_checked_at??null,
+  finishedAt:row?.last_checked_at??null,
   error:row?.last_error?String(row.last_error).slice(0,200):null,
   summary:{
    players:Number(summary.players||0),
@@ -47,9 +47,9 @@ function safeWorker(row){
 function safeScraper(row){
  return {
   source:row?.source??null,
-  codeCount:Number(row?.code_count||0),
+  codeCount:Number(row?.last_code_count||0),
   consecutiveEmptyRuns:Number(row?.consecutive_empty_runs||0),
-  consecutiveErrors:Number(row?.consecutive_errors||0),
+  consecutiveErrors:Number(row?.consecutive_error_runs||0),
   lastSuccessAt:row?.last_success_at??null,
   alertState:row?.alert_state??null,
   lastError:row?.last_error?String(row.last_error).slice(0,160):null
@@ -58,9 +58,9 @@ function safeScraper(row){
 
 async function logsResponse(res){
  const [workers,scrapers,recentRuns,players,giftCodes,redemptions,events,scraperRuns,supportTickets,announcements]=await Promise.all([
-  query("kingshot_worker_slots?select=slot_id,last_status,last_started_at,last_finished_at,last_error,summary&order=slot_id"),
-  query("kingshot_scraper_health?select=source,consecutive_empty_runs,consecutive_errors,code_count,last_success_at,last_error,alert_state&order=source"),
-  query("kingshot_scraper_runs?select=*&order=started_at.desc&limit=20"),
+  query("kingshot_worker_slots?select=slot,last_status,last_checked_at,last_checked_at,last_error,last_summary&order=slot"),
+  query("kingshot_scraper_health?select=source,consecutive_empty_runs,consecutive_error_runs,last_code_count,last_success_at,last_error,alert_state&order=source"),
+  query("kingshot_scraper_runs?select=*&order=checked_at.desc&limit=20"),
   count("kingshot_autoredeem"),
   count("kingshot_gift_codes"),
   count("kingshot_redemptions"),
@@ -79,10 +79,10 @@ async function logsResponse(res){
   scrapers:Array.isArray(scrapers)?scrapers.map(safeScraper):[],
   recentScraperRuns:Array.isArray(recentRuns)?recentRuns.slice(0,20).map(row=>({
    source:row?.source??null,
-   startedAt:row?.started_at??null,
-   finishedAt:row?.finished_at??null,
+   startedAt:row?.checked_at??null,
+   finishedAt:row?.checked_at??null,
    httpStatus:row?.http_status??null,
-   codeCount:Number(row?.code_count||0),
+   codeCount:Number(row?.last_code_count||0),
    parseOk:row?.parse_ok??null,
    errorCategory:row?.error_category??null,
    error:row?.error_message?String(row.error_message).slice(0,160):null
@@ -97,23 +97,23 @@ export default async function handler(req,res){
  try{
   if(String(req.query?.logs||"") === "1")return await logsResponse(res);
 
-  const r=await fetch(SUPABASE_URL+"/rest/v1/kingshot_worker_state?select=last_started_at,last_finished_at,last_status,lock_until&id=eq.true&limit=1",{
+  const r=await fetch(SUPABASE_URL+"/rest/v1/kingshot_worker_state?select=last_checked_at,last_checked_at,last_status,lock_until&id=eq.true&limit=1",{
    headers:{apikey:SUPABASE_KEY,authorization:"Bearer "+SUPABASE_KEY},
    signal:AbortSignal.timeout(5000)
   });
   const rows=await r.json().catch(()=>[]);
   if(!r.ok||!Array.isArray(rows)||!rows[0])return res.status(503).json({healthy:false,error:"Worker state unavailable."});
   const state=rows[0],now=Date.now();
-  const started=state.last_started_at?Date.parse(state.last_started_at):NaN;
-  const finished=state.last_finished_at?Date.parse(state.last_finished_at):NaN;
+  const started=state.last_checked_at?Date.parse(state.last_checked_at):NaN;
+  const finished=state.last_checked_at?Date.parse(state.last_checked_at):NaN;
   const ageMs=state.last_status==="RUNNING"&&Number.isFinite(started)?now-started:Number.isFinite(finished)?now-finished:Infinity;
   const healthy=(state.last_status==="COMPLETED"||state.last_status==="RUNNING")&&ageMs<=12*60*1000;
   res.setHeader("Cache-Control","no-store");
   return res.status(healthy?200:503).json({
    healthy,
    status:String(state.last_status||"UNKNOWN"),
-   lastCompletedAt:state.last_finished_at||null,
-   runningSince:state.last_status==="RUNNING"?state.last_started_at:null,
+   lastCompletedAt:state.last_checked_at||null,
+   runningSince:state.last_status==="RUNNING"?state.last_checked_at:null,
    ageSeconds:Number.isFinite(ageMs)?Math.max(0,Math.round(ageMs/1000)):null,
    locked:Boolean(state.lock_until&&Date.parse(state.lock_until)>now)
   });
