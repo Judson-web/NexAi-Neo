@@ -795,3 +795,43 @@ footer>span:last-child a:hover{color:#fff}
 
 /* General accessibility baseline */
 .skip-link{position:fixed;left:12px;top:10px;z-index:100;padding:9px 12px;border:1px solid #a995ff;border-radius:9px;background:#11101a;color:#fff;font-size:10px;font-weight:800;text-decoration:none;transform:translateY(-150%);transition:transform .18s ease;box-shadow:0 8px 25px #0008}.skip-link:focus{transform:none;outline:3px solid #a995ff55;outline-offset:2px}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid #a995ff;outline-offset:3px}input::placeholder{opacity:.72}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* Detailed service information page */
+.info-app main{width:min(1100px,calc(100% - 40px));margin:0 auto;padding:34px 0 70px}
+.info-hero{position:relative;padding:34px 0 48px}
+.info-hero h1{font-size:clamp(48px,7vw,82px);line-height:.94;letter-spacing:-.055em;margin:13px 0 18px}
+.info-hero h1 em{font-style:normal;color:#a995ff}
+.info-hero .hero-copy{max-width:650px;font-size:13px;line-height:1.7;color:#858b99}
+.info-back{display:inline-flex;align-items:center;gap:6px;margin-bottom:34px;padding:8px 10px;border:1px solid #242733;border-radius:9px;background:#101218;color:#aab0bc;font-size:9px;font-weight:800}
+.info-back:hover{border-color:#413b50;color:#fff;transform:translateX(-1px)}
+.info-flow,.info-features{padding:28px 0 18px}
+.info-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:15px}
+.info-steps article{display:grid;grid-template-columns:42px 1fr;gap:14px;padding:18px;border:1px solid #20232d;border-radius:15px;background:linear-gradient(145deg,#101218,#0b0d12)}
+.info-steps article>b{font:800 9px ui-monospace,SFMono-Regular,Menlo,monospace;color:#8f73f1}
+.info-steps strong{font-size:12px}
+.info-steps p,.info-grid p,.info-backfill p{margin:5px 0 0;color:#777e8c;font-size:10px;line-height:1.65}
+.info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:15px}
+.info-grid article{display:flex;gap:13px;padding:17px;border:1px solid #20232d;border-radius:15px;background:#0d0f14}
+.info-grid h3{margin:1px 0 0;font-size:11px}
+.info-icon{width:35px;height:35px;display:grid;place-items:center;flex:0 0 auto;border:1px solid #2c2740;border-radius:10px;background:#171321;color:#a995ff}
+.info-backfill{display:flex;gap:15px;margin:24px 0;padding:22px;border:1px solid #3a3150;border-radius:17px;background:linear-gradient(135deg,#171321,#0d0f14);box-shadow:0 15px 45px #0003}
+.info-callout-icon{width:42px;height:42px;display:grid;place-items:center;flex:0 0 auto;border-radius:12px;background:#211a35;color:#b8a8ff}
+.info-backfill h2{margin:5px 0 0;font-size:21px;letter-spacing:-.02em}
+.info-backfill small{display:block;margin-top:11px;color:#656c79;font-size:8px;line-height:1.55}
+.info-notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:9px}
+.info-notes>div{display:flex;gap:10px;padding:14px;border:1px solid #1d2028;border-radius:13px;background:#0b0d12;color:#9d8dd5}
+.info-notes b,.info-notes span{display:block}.info-notes b{font-size:9px;color:#d7d9df}.info-notes span{margin-top:3px;color:#626a78;font-size:8px;line-height:1.5}
+.info-mobile-menu{display:none}
+@media(max-width:760px){
+ .info-app main{width:calc(100% - 24px);padding-top:18px}
+ .info-hero{padding:20px 0 34px}.info-hero h1{font-size:clamp(43px,13vw,65px)}
+ .info-steps,.info-grid,.info-notes{grid-template-columns:1fr}
+ .info-backfill{padding:17px;gap:11px}.info-backfill h2{font-size:18px}
+}
+@media(prefers-reduced-motion:reduce){.info-back,.info-app article{transition:none}}
+
+@media(max-width:760px){
+ .info-mobile-menu{position:fixed;z-index:80;top:58px;left:12px;right:12px;display:grid;gap:3px;padding:7px;border:1px solid #252833;border-radius:13px;background:rgba(13,15,21,.98);box-shadow:0 18px 50px #0009;backdrop-filter:blur(14px)}
+ .info-mobile-menu a{padding:11px 12px;border-radius:9px;color:#aeb3bf;font-size:10px;font-weight:800;text-decoration:none}
+ .info-mobile-menu a:hover,.info-mobile-menu a:focus-visible{background:#171923;color:#fff}
+}
