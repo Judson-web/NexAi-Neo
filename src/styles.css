@@ -938,3 +938,33 @@ footer>span:last-child a:hover{color:#fff}
  .ks-app .ks-support .section-title h2{font-size:19px}
  .ks-app .ks-auto-how .feature-grid article{border-radius:13px}
 }
+
+
+/* Public site final UI pass */
+body,#root{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.ks-app header{position:relative;z-index:40}
+.ks-app header .brand,.ks-app header nav,.ks-app header .header-right{display:flex;align-items:center}
+.ks-app header .header-right{gap:9px}
+.ks-app header .menu-btn{width:36px;height:36px;display:none;place-items:center;border:1px solid #292d37;border-radius:10px;background:#101218;color:#b9bec8}
+.ks-app .eyebrow{display:flex;align-items:center;gap:7px;color:#8f73f1;font-size:8px;font-weight:900;letter-spacing:.16em}
+.ks-app .eyebrow span{width:6px;height:6px;border-radius:50%;background:#a995ff;box-shadow:0 0 0 4px #a995ff15}
+.ks-app footer{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 0 30px;color:#555d6a;font-size:8px;border-top:1px solid #191c23}
+.ks-app footer a{color:#777f8d;text-decoration:none}.ks-app footer a:hover{color:#fff}
+.ks-app .section-title{display:flex;align-items:end;gap:10px}.ks-app .section-title>span{color:#8f73f1;font:900 8px ui-monospace,monospace;letter-spacing:.08em}.ks-app .section-title h2{margin:0;font-size:18px;letter-spacing:-.03em}
+.info-app header{width:min(1100px,calc(100% - 40px));position:relative}
+.info-app .hero-copy{color:#777e8c}
+.info-app article,.info-app .info-backfill,.info-app .info-notes>div{transition:transform .18s ease,border-color .18s ease,background .18s ease}
+.info-app article:hover{transform:translateY(-2px);border-color:#302a43}
+.legal-app header{width:min(900px,calc(100% - 40px));position:relative}
+.legal-app footer{width:min(900px,calc(100% - 40px))}
+@media(max-width:760px){
+ .ks-app header{width:calc(100% - 24px);height:62px}
+ .ks-app header nav{display:none}
+ .ks-app header .menu-btn{display:grid}
+ .ks-app .mobile-menu{position:absolute;right:12px;top:56px;display:flex;min-width:180px;padding:6px;gap:2px;border:1px solid #282c37;border-radius:13px;background:rgba(13,15,21,.98);box-shadow:0 18px 50px #000a;backdrop-filter:blur(14px)}
+ .ks-app .mobile-menu a{padding:11px 12px;border-radius:9px;color:#aeb4bf;text-decoration:none;font-size:10px;font-weight:800}
+ .ks-app .mobile-menu a:hover{background:#171923;color:#fff}
+ .ks-app footer{width:calc(100% - 24px);align-items:flex-start;flex-direction:column;gap:9px;padding-bottom:24px}
+ .ks-app .section-title h2{font-size:17px}
+ .info-app header,.legal-app header,.legal-app footer{width:calc(100% - 24px)}
+}
