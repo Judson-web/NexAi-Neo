@@ -1,0 +1,1 @@
+import health from"../../lib/health.js";import support from"../../lib/support.js";export default async function handler(req,res){const p=Array.isArray(req.query?.path)?req.query.path.join("/"):String(req.query?.path||"");if(p==="support")return support(req,res);return health(req,res)}
