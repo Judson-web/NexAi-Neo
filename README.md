@@ -4,9 +4,9 @@
 
 # Kingshot Auto Redeemer
 
-**Continuous Kingshot gift-code discovery and automatic redemption.**
+**Automated Kingshot gift-code discovery, redemption, and backfill.**
 
-[![Live Site](https://img.shields.io/badge/Live%20Site-Kingshot%20Auto%20Redeemer-2563EB?style=for-the-badge&logo=vercel&logoColor=white)](https://kingshot-autoredeemer.vercel.app/)
+[![Live Site](https://img.shields.io/badge/Live%20Site-Kingshot%20Auto%20Redeem-2563EB?style=for-the-badge&logo=vercel&logoColor=white)](https://kingshot-autoredeemer.vercel.app/)
 [![Node 22](https://img.shields.io/badge/Node.js-22.x-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=111827)](https://react.dev/)
 [![Vite 6](https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
@@ -14,36 +14,142 @@
 [![Vercel](https://img.shields.io/badge/Vercel-Production-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com/)
 [![Guardrails](https://github.com/Judson-web/kingshot-auto-redeemer/actions/workflows/guardrails.yml/badge.svg)](https://github.com/Judson-web/kingshot-auto-redeemer/actions/workflows/guardrails.yml)
 
-[**Open the website →**](https://kingshot-autoredeemer.vercel.app/) · [**How it works →**](https://kingshot-autoredeemer.vercel.app/info) · [**Report an issue →**](https://github.com/Judson-web/kingshot-auto-redeemer/issues)
+[**Website →**](https://kingshot-autoredeemer.vercel.app/) · [**Developer API →**](https://kingshot-autoredeemer.vercel.app/developers.html) · [**How it works →**](https://kingshot-autoredeemer.vercel.app/info) · [**Issues →**](https://github.com/Judson-web/kingshot-auto-redeemer/issues)
 
 </div>
 
-> **Independent community service:** Kingshot Auto Redeemer is not affiliated with, endorsed by, or operated by Century Games.
+> **Independent community service:** This project is not affiliated with, endorsed by, or operated by Century Games.
 
-## Features
-| | Capability | Description |
+## Overview
+
+Kingshot Auto Redeemer is a server-side automation service for eligible Kingshot gift codes. It supports continuous discovery, automatic redemption, manual redemption, and backfill for codes that were legitimately missed.
+
+The same redemption core powers the public website and the Developer API, while privileged signing material remains server-side.
+
+## What you can build
+
+| Capability | Intended use |
+|---|---|
+| **Auto-redeem** | Periodically redeem eligible public gift codes for an authorized Player ID. |
+| **Backfill** | Catch up on still-eligible codes missed while offline, before registration, or during an interruption. |
+| **Bots & workers** | Run scheduled Discord bots, backend jobs, or community services. |
+| **Manual redemption** | Submit a specific code directly from the website. |
+| **Code discovery** | Normalize and deduplicate codes from configured public sources. |
+| **Persistent history** | Prevent unnecessary duplicate processing and preserve redemption outcomes. |
+
+## Developer API
+
+Build server-side Kingshot integrations without implementing the upstream signing flow yourself.
+
+**Base URL**
+
+`https://kingshot-autoredeemer.vercel.app/api/v1`
+
+### Endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/v1` | None | API metadata |
+| GET | `/api/v1/health` | None | Service health |
+| POST | `/api/v1/redeem` | Bearer key | Redeem an eligible gift code |
+
+### Quick start
+
+1. Create a verified developer account at the Developer Portal.
+2. Create an API key and copy the secret once.
+3. Store the key in your backend secret manager.
+4. Call `POST /api/v1/redeem`.
+5. Persist the returned request ID and redemption status.
+
+```bash
+curl -X POST https://kingshot-autoredeemer.vercel.app/api/v1/redeem \
+  -H "Authorization: Bearer ks_live_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"playerId":"123456789","kingdomId":"1125","code":"EXAMPLECODE"}'
+```
+
+### Request
+
+| Field | Type | Rules |
 |---|---|---|
-| ⚡ | **Auto Redeem** | Processes eligible gift codes automatically. |
-| 🔄 | **Backfill** | Picks up active codes a player has not handled. |
-| 🔎 | **Code Discovery** | Normalizes and deduplicates codes from configured public sources. |
-| 🧾 | **Persistent History** | Stores player/code outcomes to avoid unnecessary repeats. |
-| 🎟️ | **Manual Redeem** | Supports direct code submission from the website. |
-| 🧩 | **Durable Workers** | Distributes registered players across three worker shards. |
-| 🛡️ | **Server-side Processing** | Keeps privileged credentials and signing material out of the browser. |
-| 🚦 | **Rate Limiting** | Protects public API surfaces from excessive requests. |
-| 📡 | **Continuous Scheduler** | Production coordination runs every minute. |
+| `playerId` | string | 4–32 digits |
+| `kingdomId` | string | 1–8 digits |
+| `code` | string | 3–64 characters: letters, numbers, `_`, `-` |
 
-## Architecture
+### Response
+
+Successful responses include a stable status, human-readable label, message, and request ID.
+
+```json
+{
+  "ok": true,
+  "status": "SUCCESS",
+  "statusLabel": "Redeemed",
+  "message": "Gift code redeemed successfully.",
+  "errCode": null,
+  "requestId": "…"
+}
+```
+
+### Automation and backfill
+
+The API explicitly supports legitimate automation.
+
+**Auto-redeem:** scheduled workers, Discord bots, community tools, and backend services may periodically discover eligible public codes and redeem them for authorized Player IDs.
+
+**Backfill:** integrations may catch up on still-eligible codes missed while offline, before registration, or during a temporary interruption.
+
+Both flows must use the normal API and remain subject to authentication, quotas, rate limits, cooldowns, eligibility checks, duplicate prevention, upstream restrictions, and reasonable retry/backoff.
+
+Automation does not mean unlimited replay. Do not continuously retry expired, invalid, already-handled, or otherwise ineligible codes.
+
+### Limits
+
+| Limit | Default |
+|---|---:|
+| Active API keys / account | 3 |
+| Requests / minute / key | 2 |
+| Requests / day / key | 100 |
+
+Limits may change as the service evolves. `429` responses include `Retry-After` where applicable.
+
+### HTTP behavior
+
+| Status | Meaning |
+|---:|---|
+| `400` | Invalid or malformed request |
+| `401` | Missing, invalid, or inactive API key |
+| `429` | Rate or daily quota exceeded |
+| `5xx` | Temporary service/upstream failure |
+
+Responses include request IDs for troubleshooting. Integrations should retry conservatively and respect server-provided limits.
+
+### Security
+
+API keys are generated using cryptographically secure randomness and only their SHA-256 hashes are stored. The full secret is shown once.
+
+**Never:**
+
+- put an API key in browser JavaScript or mobile client code;
+- commit a key to Git;
+- expose a key in logs or public repositories;
+- share a key with untrusted users;
+- rotate keys/accounts/IPs to bypass quotas;
+- probe or overload the API or upstream services.
+
+Use a server-side secret manager or protected environment variable.
+
+## Automatic redemption architecture
 
 ```mermaid
 flowchart LR
     A[Public code sources] --> B[Normalize + deduplicate]
-    B --> C[Expiry + handled-code filtering]
+    B --> C[Eligibility + expiry filtering]
     C --> D[Redemption coordinator]
     D --> W0[Worker 0]
     D --> W1[Worker 1]
     D --> W2[Worker 2]
-    W0 --> E[Player/code claim]
+    W0 --> E[Player/code claims]
     W1 --> E
     W2 --> E
     E --> F[Server-side redemption]
@@ -51,223 +157,89 @@ flowchart LR
     G --> C
 ```
 
-## At a glance
+Production coordination runs every minute. The current worker pool uses three durable shards, six concurrent player operations per worker, deterministic sharding, durable leases, atomic player/code claims, and persistent completion history.
 
-```text
-Register player
-     ↓
-Discover + normalize codes
-     ↓
-Filter expired / handled codes
-     ↓
-Distribute players across 3 workers
-     ↓
-Claim + redeem eligible codes
-     ↓
-Persist the result
-```
+## Redemption statuses
 
-## What it does
+The redemption layer maps common upstream results into stable internal outcomes, including:
 
-- **Automatic redemption** — registered players are processed automatically by the production worker system.
-- **Backfill** — active codes that a player has not handled can be picked up after registration; backfill uses the same normal redemption flow rather than a separate one-time job.
-- **Live code discovery** — public sources are collected, normalized, deduplicated, and filtered for known expired codes.
-- **Persistent redemption history** — player/code results are stored so the same work is not repeatedly attempted.
-- **Manual redemption** — users can submit a specific gift code when they want to redeem it themselves.
-- **Durable worker pool** — registered players are deterministically distributed across three worker shards, with concurrent processing inside each worker.
-- **Server-side redemption** — the actual game redemption request is made from the server, keeping signing material and privileged database credentials out of the browser.
-- **Protected public endpoints** — registration and other public API surfaces use validation, rate limiting, and server-side checks.
-- **Readable results** — game responses are mapped to statuses such as successful, already handled, expired, invalid, and rate limited.
+- `SUCCESS` — redemption completed.
+- `RECEIVED` — already redeemed/received.
+- `SAME TYPE EXCHANGE` — already handled for the relevant reward type.
+- `TIME_ERROR` — code expired.
+- `CDK_NOT_FOUND` — code invalid or unavailable.
+- `USAGE_LIMIT` — code reached its usage limit.
 
-## How automatic redemption works
+Upstream rate-limit, login, and player errors may also be recorded.
 
-The production flow is intentionally simple:
+## Acceptable use
 
-    Public code sources
-            ↓
-    Normalize + deduplicate + expiry filtering
-            ↓
-    Redemption coordinator
-       ↙       ↓       ↘
-    Worker 0  Worker 1  Worker 2
-       ↘       ↓       ↙
-    Player/code claims + redemption
-            ↓
-    Persistent redemption history
+Automation is permitted. Abuse is not.
 
-1. A player registers their Kingshot Player ID.
-2. The service associates the registration with the player's current kingdom.
-3. The scheduler invokes the redemption coordinator every minute.
-4. Active gift codes are assembled from the configured public sources and expiry history.
-5. The coordinator distributes registered players across three durable worker slots.
-6. Each worker processes its assigned players concurrently.
-7. A player is only given eligible codes they have not already handled.
-8. The result is persisted, preventing duplicate work on later runs.
+Use only authorized Player IDs and legitimate public gift codes. Do not use the service or API to bypass quotas, evade authentication, flood requests, generate duplicate work intentionally, probe protected endpoints, harvest private data, manipulate redemption requests or results, or automate accounts/services without authorization.
 
-The worker pool is designed around durable claims and leases rather than relying on a single long-running process. Player and code claims are also protected so overlapping requests do not intentionally process the same work twice.
+Developer API integrations must not be used for credential theft, phishing, fraud, malware, harassment, denial-of-service activity, or reward abuse.
 
-## Code discovery
+We may throttle, suspend, revoke, or block access when necessary to protect users, the service, or upstream systems.
 
-The feed combines configured public sources, including the Kingshot public gift-code API/page and community code listings. Codes are normalized and deduplicated before entering the active pool.
+See the [Developer API Terms](https://kingshot-autoredeemer.vercel.app/terms?service=developer-api) and [Privacy Policy](https://kingshot-autoredeemer.vercel.app/privacy?service=developer-api).
 
-Known expired codes are filtered using persisted redemption outcomes and source expiry information. A code receiving a game-level expiry response can therefore be excluded from future automatic processing.
+## Architecture and infrastructure
 
-## Redemption behavior
+The application uses Vercel for deployment and Supabase/PostgreSQL for persistent state. Privileged operations, worker coordination, authentication, API key management, and redemption signing remain server-side.
 
-The service talks to the Kingshot gift-code endpoint from the server. Common game responses are translated into internal statuses, including:
-
-- SUCCESS — redemption completed.
-- RECEIVED — already redeemed/received.
-- SAME TYPE EXCHANGE — already handled for the relevant reward type.
-- TIME_ERROR — code has expired.
-- CDK_NOT_FOUND — code is invalid or unavailable.
-- USAGE_LIMIT — the code has reached its usage limit.
-- Rate-limit and login/player errors are also recorded when returned by the upstream service.
-
-Redemption history is per player and per code. This is separate from the global expired-code filter.
-
-## Worker architecture
-
-The application is deployed on Vercel with Supabase providing the persistent data layer.
-
-The automatic redemption path currently uses:
-
-- **3 durable worker shards**
-- **6 concurrent player operations per worker**
-- **18 theoretical simultaneous upstream attempts across the pool**
-- deterministic player-to-worker sharding
-- durable worker leases and completion records
-- atomic player/code claims
-- a minute-based production scheduler
-
-The architecture is intentionally server-side: privileged Supabase operations and redemption signing credentials are never exposed to the public frontend.
-
-## Automatic redemption — permitted use and strict rules
-
-Auto Redeem is an intentional feature of this project. It is designed to automate ordinary gift-code redemption for Player IDs that the user is authorized to use. Automation itself is permitted; abuse of the automation is not.
-
-By using the automatic redemption flow, you agree to these rules:
-
-- **Only use authorized Player IDs.** Do not register another person's account or Player ID without their permission.
-- **No credential abuse.** Never submit, request, collect, share, or attempt to discover passwords, session tokens, authentication codes, signing secrets, or other private credentials.
-- **No quota bypassing.** Do not evade rate limits, worker limits, cooldowns, API restrictions, duplicate-prevention controls, or other safeguards by rotating identities, keys, IP addresses, accounts, or requests.
-- **No flooding or spam.** Do not intentionally generate excessive redemption requests, duplicate jobs, repeated retries, or traffic intended to degrade the service or the upstream game systems.
-- **No scraping for abuse.** Public code discovery is used to find legitimate gift codes; do not use the service to harvest private data, enumerate accounts, probe protected endpoints, or collect information unrelated to redemption.
-- **No unauthorized automation against third parties.** Do not use this project to automate actions on accounts, services, or infrastructure that you do not have permission to operate.
-- **No manipulation of redemption outcomes.** Do not tamper with requests, signatures, claims, worker coordination, API responses, or stored state to obtain rewards outside the normal redemption process.
-- **No malicious integrations.** Developer API integrations must remain server-side and must not be used for malware, credential theft, phishing, fraud, harassment, denial-of-service activity, or attempts to compromise the service or upstream systems.
-- **Respect upstream rules.** Kingshot/third-party services may impose their own terms, limits, eligibility rules, and technical restrictions. This project does not override them.
-- **Keep keys private.** Developer API keys are credentials. Store them server-side, rotate or revoke them if exposed, and never commit them to source control or ship them to clients.
-- **Respect service controls.** We may throttle, suspend, revoke, or block registrations, API keys, IPs, or other access where necessary to protect users, the service, or upstream systems.
-
-A normal personal or community integration that periodically checks for eligible public gift codes and redeems them for an authorized Player ID is within the intended use of Auto Redeem. The fact that an action is automated does not by itself make it abusive; behavior that bypasses safeguards, exceeds reasonable use, or targets accounts or systems without authorization is prohibited.
-
-## Developer API
-
-The service also exposes a versioned API for third-party Kingshot tools, bots, and websites. Developers call the API instead of implementing the Kingshot signing flow themselves; the upstream signing secret remains server-side.
-
-**Base URL:** https://kingshot-autoredeemer.vercel.app/api/v1
-
-| Method | Endpoint | Authentication | Purpose |
-|---|---|---|---|
-| GET | `/api/v1` | None | API metadata |\n| GET | `/api/v1/health` | None | Health check |
-| GET | `/api/v1/health` | None | Health check |
-| POST | `/api/v1/redeem` | Bearer API key | Redeem a gift code |
-
-Example:
-
-```bash
-curl -X POST https://kingshot-autoredeemer.vercel.app/api/v1/redeem \\
-  -H "Authorization: Bearer ks_live_YOUR_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"playerId":"123456789","kingdomId":"1125","code":"EXAMPLECODE"}'
-```
-
-Developer accounts require verified email authentication before key management. API keys are cryptographically random, stored only as SHA-256 hashes, shown in full only once, and scoped to the owning account. Each account can have up to 3 active keys. The current default per-key quota is 2 requests/minute and 100 requests/day; both are enforced centrally in PostgreSQL, while a separate short-window IP guard provides additional abuse protection. The developer API explicitly permits legitimate automated redemption flows, including scheduled workers, Discord bots, community tools, and backend services, for authorized Player IDs. Automation may discover legitimate public codes, queue eligible codes, submit requests periodically, and persist results, but must respect quotas, rate limits, cooldowns, duplicate-prevention controls, upstream restrictions, and reasonable retry/backoff behavior. **Backfill is also an intended API use case:** an integration may catch up on eligible codes that became available while its worker was offline, newly registered, temporarily unavailable, or otherwise missed, using the same normal redemption flow and duplicate-prevention rules. Backfill must not mean replaying requests indefinitely or bypassing limits; only codes that are still eligible should be attempted. Do not rotate keys/accounts/IPs to evade limits, flood the API, generate duplicate jobs, probe protected endpoints, manipulate requests, or use the API for unauthorized automation, credential theft, phishing, fraud, malware, harassment, denial-of-service activity, private-data harvesting, or reward abuse. The developer API is an independent community interface, not an official Century Games API. Never expose keys in browser code, mobile apps, public repositories, or frontend environment variables.
+The repository contains security regression checks, production smoke tests, worker health checks, API guardrails, and database privilege checks.
 
 ## Website
 
-**Production:** https://kingshot-autoredeemer.vercel.app/
-
-The public site includes automatic redemption, manual redemption, a developer portal/API, service documentation, terms, and privacy pages.
-
 | Route | Purpose |
 |---|---|
-| `/` | Main service experience |
+| `/` | Main service |
 | `/auto` | Automatic redemption |
 | `/manual` | Manual redemption |
-| `/info` | How the service works |
+| `/info` | Service documentation |
+| `/developers.html` | Developer API portal |
 | `/terms` | Terms |
-| `/privacy` | Privacy |\n| `/developers.html` | Developer API portal |
+| `/privacy` | Privacy |
 
-## Development
+## Local development
 
-Requirements:
+**Requirements:** Node.js 22.x and npm.
 
-- Node.js 22.x
-- npm
+```bash
+npm install
+npm run dev
+```
 
-Install dependencies and start the Vite development server:
+Production build:
 
-    npm install
-    npm run dev
+```bash
+npm run build
+```
 
-Build for production:
+Preview:
 
-    npm run build
+```bash
+npm run preview
+```
 
-Preview the production build locally:
+## Environment
 
-    npm run preview
-
-## Environment and deployment
-
-Secrets are configured through the deployment environment and are not committed to the repository.
-
-The application uses server-only credentials for privileged Supabase operations. Discord integrations and other upstream credentials are likewise expected to remain in the server/deployment environment.
-
-Vercel is the production deployment platform.
-
-## Security
-
-Security-sensitive functionality is intentionally kept behind server-side API routes and Supabase functions. Public roles do not receive direct execution access to privileged worker/admin operations.
-
-The repository also includes automated security regression checks, production smoke tests, and a worker watchdog in GitHub Actions.
+Production secrets are configured through the deployment environment and are never committed to the repository.
 
 Do not commit:
 
-- Supabase service-role/secret keys
-- Discord bot or webhook credentials
+- Supabase service-role or secret keys
 - Kingshot API/signing secrets
-- admin passwords or session tokens
-- other production credentials
-
-## Guardrails
-
-The repository includes automated checks for security regressions, production builds, endpoint smoke tests, worker health, privileged RPC restrictions, server-only credentials, worker-pool invariants, duplicate prevention, and unsafe pg_net migration patterns.
-
-## Project status
-
-The production system currently includes:
-
-- automatic gift-code redemption
-- manual redemption
-- continuous one-minute scheduling
-- three durable worker shards
-- six concurrent player operations per worker
-- persistent player/code redemption history
-- active-code discovery and expiry filtering
-- state-driven backfill
-- protected server-side APIs
-- connected service documentation at `/info`
-
-The repository's `main` branch is protected by required pull requests and CI checks before merging.
+- Discord credentials
+- admin passwords
+- session tokens
+- Developer API keys
 
 ## Contributing
 
-Changes affecting redemption behavior, database functions, worker coordination, authentication, or public API security should be treated as production-sensitive. Keep secrets out of source control, run the production build and relevant regression checks, and keep unrelated changes out of focused fixes.
+Changes involving redemption behavior, workers, database functions, authentication, API security, or public contracts are production-sensitive. Keep focused changes isolated, run the relevant regression checks, and never include credentials in commits.
 
 ## License
 
-This project is licensed under the [MIT License](./LICENSE).
-\n## Developer portal\n\nOpen **https://kingshot-autoredeemer.vercel.app/developers.html** to create a developer account, verify your email, create/revoke API keys, and view integration examples. The browser-facing portal uses secure HttpOnly session cookies; the redemption API itself uses `Authorization: Bearer ks_live_...`.\n\nThe developer API intentionally separates three trust boundaries: Supabase Auth protects the developer account, hashed API keys authorize server-to-server API calls, and the upstream Kingshot signing material remains server-only. API responses include a request ID for support and troubleshooting, and the API uses stable error codes for authentication, quota, validation, and redemption failures.\n
+MIT — see [LICENSE](./LICENSE).
