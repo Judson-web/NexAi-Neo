@@ -5,9 +5,10 @@ const SUPABASE_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_S
 async function db(path,options={}){const r=await fetch(SUPABASE_URL+"/rest/v1/"+path,{...options,headers:{"apikey":SUPABASE_KEY,"authorization":"Bearer "+SUPABASE_KEY,"content-type":"application/json",Prefer:"return=representation",...(options.headers||{})},signal:AbortSignal.timeout(8000)});const d=await r.json().catch(()=>null);if(!r.ok)throw Error(d?.message||"Developer key service unavailable.");return d}
 const hash=v=>crypto.createHash("sha256").update(String(v)).digest("hex");
 const makeKey=()=> "ks_live_"+crypto.randomBytes(32).toString("base64url");
-const cors=res=>{res.setHeader("Access-Control-Allow-Origin","*");res.setHeader("Cache-Control","no-store")};
+const cors=res=>{res.setHeader("Access-Control-Allow-Origin",process.env.DEVELOPER_CORS_ORIGIN||"https://kingshot-autoredeemer.vercel.app");res.setHeader("Vary","Origin");res.setHeader("Access-Control-Allow-Headers","Content-Type");res.setHeader("Access-Control-Allow-Methods","GET, POST, DELETE, OPTIONS");res.setHeader("Cache-Control","no-store")};
 export default async function handler(req,res){
  cors(res);
+ if(req.method==="OPTIONS")return res.status(204).end();
  if(!["GET","POST","DELETE"].includes(req.method))return res.status(405).json({error:"Method not allowed"});
  try{
   const user=await getDeveloperUser(req,res);if(!user)return res.status(401).json({error:"Authentication required."});
