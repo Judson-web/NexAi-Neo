@@ -835,3 +835,38 @@ footer>span:last-child a:hover{color:#fff}
  .info-mobile-menu a{padding:11px 12px;border-radius:9px;color:#aeb3bf;font-size:10px;font-weight:800;text-decoration:none}
  .info-mobile-menu a:hover,.info-mobile-menu a:focus-visible{background:#171923;color:#fff}
 }
+
+
+/* Auto Redeem layout consolidation */
+.ks-app .ks-auto-hero{width:min(760px,100%);margin:0 auto;padding:76px 0 58px;text-align:center}
+.ks-app .ks-auto-hero h1{margin:18px 0 16px;font-size:clamp(48px,7vw,78px);line-height:.95;letter-spacing:-.075em}
+.ks-app .ks-auto-hero h1 em{font-style:normal;color:#d5a85c}
+.ks-app .ks-auto-hero .hero-copy{max-width:620px;margin:0 auto;color:#777e8c;font-size:12px;line-height:1.65}
+.ks-app .ks-register-box{width:100%;margin:30px auto 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;text-align:left}
+.ks-app .ks-register-field{min-width:0;padding:11px 13px;border:1px solid #292a32;border-radius:12px;background:#101116;box-sizing:border-box}
+.ks-app .ks-register-field label{display:block;margin:0 0 7px;color:#5f626d;font-size:7px;font-weight:850;letter-spacing:.16em}
+.ks-app .ks-register-field>div{display:flex;align-items:center;gap:9px}
+.ks-app .ks-register-field svg{flex:none;color:#77707f}
+.ks-app .ks-register-field input{width:100%;min-width:0;border:0;outline:0;background:none;color:#fff;font-size:13px}
+.ks-app .ks-register-field input::placeholder{color:#555b69}
+.ks-app .ks-register-field small{display:block;margin:7px 0 0 26px;color:#555b67;font-size:8px;line-height:1.45}
+.ks-app .ks-register-box>.ks-submit{min-width:205px;height:100%;align-self:stretch}
+.ks-app .ks-registered,.ks-app .ks-support{width:100%;box-sizing:border-box}
+.ks-app .ks-support{margin:24px auto 0}
+.ks-app .ks-auto-how{padding:12px 0 76px}
+@media(max-width:680px){
+ .ks-app .ks-auto-hero{padding:52px 0 48px;text-align:left}
+ .ks-app .ks-auto-hero h1{font-size:clamp(40px,12vw,54px);line-height:.92;margin:16px 0 14px}
+ .ks-app .ks-auto-hero .hero-copy{margin:0;max-width:520px;font-size:12px;line-height:1.6}
+ .ks-app .ks-register-box{margin-top:22px;grid-template-columns:1fr}
+ .ks-app .ks-register-field{min-height:76px}
+ .ks-app .ks-register-field input{font-size:12px}
+ .ks-app .ks-register-box>.ks-submit{width:100%;min-width:0;height:50px;min-height:50px}
+ .ks-app .ks-auto-how{padding-bottom:60px}
+}
+@media(max-width:420px){
+ .ks-app .ks-auto-hero{padding-top:44px}
+ .ks-app .ks-auto-hero h1{font-size:clamp(38px,12.5vw,50px)}
+ .ks-app .ks-register-field{padding:10px 12px}
+ .ks-app .ks-register-field small{margin-left:26px}
+}
