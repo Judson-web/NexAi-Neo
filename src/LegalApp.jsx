@@ -14,7 +14,7 @@ export default function LegalApp({type}){
   const serviceKey=key||"kingshot-manual";
   return <div className="app legal-app">
     <header>
-      <a className="brand" href={base}><span className="brand-mark">{key==="discord-pfp"?"D":"K"}</span><span>{privacy?"Privacy":"Terms"} · {service.label}</span></a>
+      <a className="brand" href={base}><span className="brand-mark">{"K"}</span><span>{privacy?"Privacy":"Terms"} · {service.label}</span></a>
       <div className="header-right"><a className="legal-back" href={base}>← Back</a></div>
     </header>
     <main>
