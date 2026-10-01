@@ -1,8 +1,16 @@
 {
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/auto.html"
+    },
+    {
       "source": "/auto",
       "destination": "/auto.html"
+    },
+    {
+      "source": "/info",
+      "destination": "/index.html"
     },
     {
       "source": "/manual",
