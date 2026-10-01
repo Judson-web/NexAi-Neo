@@ -9,7 +9,7 @@ export default async function handler(req,res){
  try{
   if(req.method==="GET"){const user=await getDeveloperUser(req,res);return json(res,200,{authenticated:Boolean(user),user:user?{id:user.id,email:user.email,emailConfirmed:Boolean(user.email_confirmed_at)}:null});}
   if(!originAllowed(req))return json(res,403,{error:"Cross-origin developer account requests are not allowed."});
-  if(req.method==="DELETE"){const c=cookies(req);if(c.__Host-ks_dev_access)await auth("logout",{method:"POST",headers:{Authorization:"Bearer "+c.__Host-ks_dev_access}}).catch(()=>{});clearDeveloperCookies(res);return json(res,200,{ok:true});}
+  if(req.method==="DELETE"){const c=cookies(req);if(c["__Host-ks_dev_access"])await auth("logout",{method:"POST",headers:{Authorization:"Bearer "+c.__Host-ks_dev_access}}).catch(()=>{});clearDeveloperCookies(res);return json(res,200,{ok:true});}
   if(!rateLimit(req,res,"developer-auth-ip",12,60000))return json(res,429,{error:"Too many authentication attempts. Please wait a minute."});
   const body=req.body||{},action=String(body.action||"").toLowerCase(),email=String(body.email||"").trim().toLowerCase(),password=String(body.password||"");
   if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return json(res,400,{error:"Enter a valid email address."});
