@@ -520,7 +520,8 @@ export default async function handler(req,res){
 
   await Promise.all(codes.map(item=>rpc("upsert_kingshot_gift_code",{
    p_code:item.code,
-   p_source_date:item.createdAt&&!Number.isNaN(item.createdAt)?new Date(item.createdAt).toISOString().slice(0,10):null
+   p_source_date:item.createdAt&&!Number.isNaN(item.createdAt)?new Date(item.createdAt).toISOString().slice(0,10):null,
+   p_expires_at:item.expiresAt&&!Number.isNaN(item.expiresAt)?new Date(item.expiresAt).toISOString():null
   })));
   const expiredRows=await rpc("list_kingshot_expired_gift_codes",{}).catch(error=>{
    console.error("Expired-code lookup failed:",error?.message||error);
@@ -529,12 +530,17 @@ export default async function handler(req,res){
   const expiredCodes=new Set((Array.isArray(expiredRows)?expiredRows:[])
    .map(row=>String(row?.gift_code||"").trim().toUpperCase())
    .filter(Boolean));
-  const activeCodes=codes.filter(item=>!expiredCodes.has(item.code.toUpperCase()));
+  const now=Date.now();
+  const activeCodes=codes.filter(item=>{
+   const sourceExpired=item.expiresAt&&!Number.isNaN(item.expiresAt)&&item.expiresAt<=now;
+   return !sourceExpired&&!expiredCodes.has(item.code.toUpperCase());
+  });
   console.log("Kingshot auto expiry filter:",{
    discovered:codes.length,
    expired:expiredCodes.size,
    filtered:codes.length-activeCodes.length,
    expiredCodes:[...expiredCodes].slice(0,50),
+   sourceExpiredCodes:codes.filter(item=>item.expiresAt&&!Number.isNaN(item.expiresAt)&&item.expiresAt<=now).map(item=>item.code).slice(0,50),
    remaining:activeCodes.map(x=>x.code)
   });
   const newCodes=activeCodes.filter(item=>!knownCodes.has(String(item.code).toUpperCase()));
