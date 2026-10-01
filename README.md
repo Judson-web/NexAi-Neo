@@ -1,27 +1,36 @@
+<div align="center">
+
+<img src="./.github/assets/readme-banner.svg" alt="Kingshot Auto Redeemer">
+
 # Kingshot Auto Redeemer
 
-> **Automatic Kingshot gift-code redemption with continuous processing, backfill, persistent history, and duplicate protection.**
+**Continuous Kingshot gift-code discovery and automatic redemption.**
 
-[Live website](https://kingshot-autoredeemer.vercel.app/) · [How it works](https://kingshot-autoredeemer.vercel.app/info) · [Report an issue](https://github.com/Judson-web/NexAi-Neo/issues)
+[![Live Site](https://img.shields.io/badge/Live%20Site-Kingshot%20Auto%20Redeemer-2563EB?style=for-the-badge&logo=vercel&logoColor=white)](https://kingshot-autoredeemer.vercel.app/)
+[![Node 22](https://img.shields.io/badge/Node.js-22.x-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=111827)](https://react.dev/)
+[![Vite 6](https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase&logoColor=111827)](https://supabase.com/)
+[![Vercel](https://img.shields.io/badge/Vercel-Production-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com/)
 
-Kingshot Auto Redeemer is an independent community service that helps registered Kingshot players discover and redeem eligible gift codes automatically. The service runs the redemption workflow on the server, remembers player/code outcomes, and continuously processes new eligible work.
+[**Open the website →**](https://kingshot-autoredeemer.vercel.app/) · [**How it works →**](https://kingshot-autoredeemer.vercel.app/info) · [**Report an issue →**](https://github.com/Judson-web/NexAi-Neo/issues)
 
-**Not affiliated with or endorsed by Century Games.**
+</div>
+
+> **Independent community service:** Kingshot Auto Redeemer is not affiliated with, endorsed by, or operated by Century Games.
 
 ## Features
-
-| Feature | What it does |
-| --- | --- |
-| ⚡ **Auto Redeem** | Processes eligible gift codes for registered players automatically. |
-| 🔄 **Backfill** | Picks up still-active codes a player has not handled. |
-| 🔎 **Code discovery** | Combines configured public sources into a normalized, deduplicated pool. |
-| 🧾 **Redemption history** | Records player/code outcomes and prevents unnecessary repeats. |
-| 🎟️ **Manual Redeem** | Lets users submit a specific gift code directly. |
-| 🧩 **Durable workers** | Splits registered players across three worker shards. |
-| 🛡️ **Server-side redemption** | Keeps privileged credentials and signing material away from the browser. |
-| 🚦 **Rate limiting** | Protects public endpoints against excessive requests. |
-| 📡 **Continuous scheduler** | Production coordination runs every minute. |
-| 📖 **Service info page** | Connected documentation is available at /info. |
+| | Capability | Description |
+|---|---|---|
+| ⚡ | **Auto Redeem** | Processes eligible gift codes automatically. |
+| 🔄 | **Backfill** | Picks up active codes a player has not handled. |
+| 🔎 | **Code Discovery** | Normalizes and deduplicates codes from configured public sources. |
+| 🧾 | **Persistent History** | Stores player/code outcomes to avoid unnecessary repeats. |
+| 🎟️ | **Manual Redeem** | Supports direct code submission from the website. |
+| 🧩 | **Durable Workers** | Distributes registered players across three worker shards. |
+| 🛡️ | **Server-side Processing** | Keeps privileged credentials and signing material out of the browser. |
+| 🚦 | **Rate Limiting** | Protects public API surfaces from excessive requests. |
+| 📡 | **Continuous Scheduler** | Production coordination runs every minute. |
 
 ## At a glance
 
@@ -120,14 +129,18 @@ The architecture is intentionally server-side: privileged Supabase operations an
 
 The public site includes automatic redemption, manual redemption, service documentation, terms, and privacy pages.
 
-## Site routes
+## Website
 
-- / — main Kingshot Auto Redeemer landing/auto-redemption experience
-- /auto — Auto Redeem
-- /manual — Manual Redeem
-- /info — How the service works
-- /terms — Terms
-- /privacy — Privacy
+**Production:** https://kingshot-autoredeemer.vercel.app/
+
+| Route | Purpose |
+|---|---|
+| `/` | Main service experience |
+| `/auto` | Automatic redemption |
+| `/manual` | Manual redemption |
+| `/info` | How the service works |
+| `/terms` | Terms |
+| `/privacy` | Privacy |
 
 ## Development
 
