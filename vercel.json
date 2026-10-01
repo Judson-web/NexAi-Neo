@@ -21,10 +21,6 @@
       "destination": "/redeem.html"
     },
     {
-      "source": "/extract",
-      "destination": "/extract.html"
-    },
-    {
       "source": "/ks-admin",
       "destination": "/index.html"
     },
@@ -82,10 +78,6 @@
     },
     {
       "source": "/privacy",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/user/:id",
       "destination": "/index.html"
     }
   ],

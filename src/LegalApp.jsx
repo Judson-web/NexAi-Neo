@@ -3,7 +3,6 @@ import React from "react";
 const services={
   "kingshot-manual":{label:"Kingshot Manual Redeemer",summary:"Manual gift-code redemption for a Kingshot Player ID."},
   "kingshot-auto":{label:"Kingshot Auto Redeem",summary:"Registration and automatic processing of active Kingshot gift codes."},
-  "discord-pfp":{label:"Discord PFP Extractor",summary:"Lookup and download tool for publicly available Discord profile avatar data."},
   "developer-api":{label:"Kingshot Developer API",summary:"Authenticated server-to-server API access for Kingshot gift-code redemption."}
 };
 
@@ -11,11 +10,11 @@ export default function LegalApp({type}){
   const key=new URLSearchParams(location.search).get("service");
   const service=services[key]||services["kingshot-manual"];
   const privacy=type==="privacy";
-  const base=key==="discord-pfp"?"/extract":key==="developer-api"?"/developers.html":"/";
+  const base=key==="developer-api"?"/developers.html":"/";
   const serviceKey=key||"kingshot-manual";
   return <div className="app legal-app">
     <header>
-      <a className="brand" href={base}><span className="brand-mark">{key==="discord-pfp"?"D":"K"}</span><span>{privacy?"Privacy":"Terms"} · {service.label}</span></a>
+      <a className="brand" href={base}><span className="brand-mark">{"K"}</span><span>{privacy?"Privacy":"Terms"} · {service.label}</span></a>
       <div className="header-right"><a className="legal-back" href={base}>← Back</a></div>
     </header>
     <main>
@@ -33,7 +32,7 @@ export default function LegalApp({type}){
         <p>This is an independent community project created and operated by Judson. It is not operated, sponsored, endorsed, or affiliated with Century Games, Kingshot, Discord, or any other platform referenced by the tools.</p>
 
         {privacy?<><h2>What we handle</h2>
-        {key==="discord-pfp"?<p>The Discord PFP Extractor is designed to work with publicly available Discord profile information. Recent lookup IDs may be kept locally in your browser to make repeat searches easier. The service does not require you to submit a Discord password or account credentials.</p>:<p>The Kingshot services may process the information needed to provide their features. Depending on the service, this can include Player ID, kingdom ID, player name, avatar URL, submitted gift codes, redemption results, timestamps, and support requests. Auto Redeem also keeps the registration state and processing history needed to prevent duplicate work, track redemption outcomes, and operate the service reliably. The auto-redeem service stores registered player information so scheduled processing can work after you leave the site. Input fields use client-side format checks to catch common mistakes before submission. These checks are a convenience feature, not a privacy or security boundary; the service may also validate submitted data server-side before processing it.</p>}
+        <p>The Kingshot services may process the information needed to provide their features. Depending on the service, this can include Player ID, kingdom ID, player name, avatar URL, submitted gift codes, redemption results, timestamps, and support requests. Auto Redeem also keeps the registration state and processing history needed to prevent duplicate work, track redemption outcomes, and operate the service reliably. The auto-redeem service stores registered player information so scheduled processing can work after you leave the site. Input fields use client-side format checks to catch common mistakes before submission. These checks are a convenience feature, not a privacy or security boundary; the service may also validate submitted data server-side before processing it.</p>
         {key==="developer-api"&&<><h2>Developer API accounts</h2><p>Developer accounts use Supabase Auth email/password authentication. The service stores the account identifier and email address needed to manage developer keys. Authentication sessions are held in secure, HttpOnly, same-site cookies. API keys are generated with cryptographically secure randomness and only a SHA-256 hash plus a short display prefix is stored; the full secret is shown once at creation and cannot be recovered by the service.</p><h2>Developer API usage</h2><p>Developer API requests are authenticated by the key supplied in the Authorization header. The service records aggregate usage counters, last-use timestamps, and request identifiers needed for quota enforcement, abuse prevention, reliability, and troubleshooting. The upstream Kingshot signing secret is never exposed to developer clients. Do not put developer API keys in browser code, mobile apps, public repositories, or client-side environment variables.</p></>}\n        <h2>Support requests</h2>
         <p>If you submit a request to remove an auto-redeem registration, the Player ID and the reason you provide are processed so an administrator can review the request. Do not include passwords, payment details, authentication codes, or other sensitive information in a support request.</p>
         <h2>Advertising and measurement</h2>
