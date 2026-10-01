@@ -1,4 +1,4 @@
-import {rateLimit} from"../lib/request-rate-limit.js";
+import {rateLimit}from"../lib/request-rate-limit.js";
 
 const SUPABASE_URL=process.env.SUPABASE_URL||"https://wocxvtptqapietlteshr.supabase.co";
 const SUPABASE_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY;
@@ -49,7 +49,7 @@ export default async function handler(req,res){
    }
    await rpc("record_kingshot_kingdom_revalidation",{p_player_id:playerId,p_kingdom_id:verified.kingdomId,p_player_name:verified.name||playerName||null,p_avatar_url:verified.avatarUrl||avatarUrl||null});
   }catch(error){
-   return res.status(503).json({error:"Player registered, but kingdom verification is temporarily unavailable. Please try again shortly.",registered:true,kingdomVerified:false});
+   return res.status(200).json({registered:true,alreadyRegistered:Boolean(result?.already_registered),registrationStatus:result?.registration_status||((result?.already_registered)?"ALREADY_REGISTERED":"NEW"),kingdomVerified:false,verificationPending:true,player:result?.player||result});
   }
   return res.status(200).json({registered:true,alreadyRegistered:Boolean(result?.already_registered),registrationStatus:result?.registration_status||((result?.already_registered)?"ALREADY_REGISTERED":"NEW"),kingdomVerified:true,verifiedKingdomId:verified.kingdomId,player:result?.player||result});
  }catch(e){return res.status(504).json({error:"Registration service timed out."})}
