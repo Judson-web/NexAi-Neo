@@ -14,7 +14,7 @@
 [![Vercel](https://img.shields.io/badge/Vercel-Production-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com/)
 [![Guardrails](https://github.com/Judson-web/kingshot-auto-redeemer/actions/workflows/guardrails.yml/badge.svg)](https://github.com/Judson-web/kingshot-auto-redeemer/actions/workflows/guardrails.yml)
 
-[**Website →**](https://kingshot-autoredeemer.vercel.app/) · [**Developer API →**](https://kingshot-autoredeemer.vercel.app/developers.html) · [**How it works →**](https://kingshot-autoredeemer.vercel.app/info) · [**Issues →**](https://github.com/Judson-web/kingshot-auto-redeemer/issues)
+[**Website →**](https://kingshot-autoredeemer.vercel.app/) · [**How it works →**](https://kingshot-autoredeemer.vercel.app/info) · [**Issues →**](https://github.com/Judson-web/kingshot-auto-redeemer/issues)
 
 </div>
 
@@ -36,108 +36,6 @@ The same redemption core powers the public website and the Developer API, while 
 | **Manual redemption** | Submit a specific code directly from the website. |
 | **Code discovery** | Normalize and deduplicate codes from configured public sources. |
 | **Persistent history** | Prevent unnecessary duplicate processing and preserve redemption outcomes. |
-
-## Developer API
-
-Build server-side Kingshot integrations without implementing the upstream signing flow yourself.
-
-**Base URL**
-
-`https://kingshot-autoredeemer.vercel.app/api/v1`
-
-### Endpoints
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/api/v1` | None | API metadata |
-| GET | `/api/v1/health` | None | Service health |
-| POST | `/api/v1/redeem` | Bearer key | Redeem an eligible gift code |
-
-### Quick start
-
-1. Create a verified developer account at the Developer Portal.
-2. Create an API key and copy the secret once.
-3. Store the key in your backend secret manager.
-4. Call `POST /api/v1/redeem`.
-5. Persist the returned request ID and redemption status.
-
-```bash
-curl -X POST https://kingshot-autoredeemer.vercel.app/api/v1/redeem \
-  -H "Authorization: Bearer ks_live_YOUR_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"playerId":"123456789","kingdomId":"1125","code":"EXAMPLECODE"}'
-```
-
-### Request
-
-| Field | Type | Rules |
-|---|---|---|
-| `playerId` | string | 4–32 digits |
-| `kingdomId` | string | 1–8 digits |
-| `code` | string | 3–64 characters: letters, numbers, `_`, `-` |
-
-### Response
-
-Successful responses include a stable status, human-readable label, message, and request ID.
-
-```json
-{
-  "ok": true,
-  "status": "SUCCESS",
-  "statusLabel": "Redeemed",
-  "message": "Gift code redeemed successfully.",
-  "errCode": null,
-  "requestId": "…"
-}
-```
-
-### Automation and backfill
-
-The API explicitly supports legitimate automation.
-
-**Auto-redeem:** scheduled workers, Discord bots, community tools, and backend services may periodically discover eligible public codes and redeem them for authorized Player IDs.
-
-**Backfill:** integrations may catch up on still-eligible codes missed while offline, before registration, or during a temporary interruption.
-
-Both flows must use the normal API and remain subject to authentication, quotas, rate limits, cooldowns, eligibility checks, duplicate prevention, upstream restrictions, and reasonable retry/backoff.
-
-Automation does not mean unlimited replay. Do not continuously retry expired, invalid, already-handled, or otherwise ineligible codes.
-
-### Limits
-
-| Limit | Default |
-|---|---:|
-| Active API keys / account | 3 |
-| Requests / minute / key | 2 |
-| Requests / day / key | 100 |
-
-Limits may change as the service evolves. `429` responses include `Retry-After` where applicable.
-
-### HTTP behavior
-
-| Status | Meaning |
-|---:|---|
-| `400` | Invalid or malformed request |
-| `401` | Missing, invalid, or inactive API key |
-| `429` | Rate or daily quota exceeded |
-| `5xx` | Temporary service/upstream failure |
-
-Responses include request IDs for troubleshooting. Integrations should retry conservatively and respect server-provided limits.
-
-### Security
-
-API keys are generated using cryptographically secure randomness and only their SHA-256 hashes are stored. The full secret is shown once.
-
-**Never:**
-
-- put an API key in browser JavaScript or mobile client code;
-- commit a key to Git;
-- expose a key in logs or public repositories;
-- share a key with untrusted users;
-- rotate keys/accounts/IPs to bypass quotas;
-- probe or overload the API or upstream services.
-
-Use a server-side secret manager or protected environment variable.
 
 ## Automatic redemption architecture
 
@@ -178,11 +76,7 @@ Automation is permitted. Abuse is not.
 
 Use only authorized Player IDs and legitimate public gift codes. Do not use the service or API to bypass quotas, evade authentication, flood requests, generate duplicate work intentionally, probe protected endpoints, harvest private data, manipulate redemption requests or results, or automate accounts/services without authorization.
 
-Developer API integrations must not be used for credential theft, phishing, fraud, malware, harassment, denial-of-service activity, or reward abuse.
-
 We may throttle, suspend, revoke, or block access when necessary to protect users, the service, or upstream systems.
-
-See the [Developer API Terms](https://kingshot-autoredeemer.vercel.app/terms?service=developer-api) and [Privacy Policy](https://kingshot-autoredeemer.vercel.app/privacy?service=developer-api).
 
 ## Architecture and infrastructure
 
@@ -198,7 +92,6 @@ The repository contains security regression checks, production smoke tests, work
 | `/auto` | Automatic redemption |
 | `/manual` | Manual redemption |
 | `/info` | Service documentation |
-| `/developers.html` | Developer API portal |
 | `/terms` | Terms |
 | `/privacy` | Privacy |
 
