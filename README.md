@@ -142,6 +142,29 @@ The automatic redemption path currently uses:
 
 The architecture is intentionally server-side: privileged Supabase operations and redemption signing credentials are never exposed to the public frontend.
 
+## Developer API
+
+The service also exposes a versioned API for third-party Kingshot tools, bots, and websites. Developers call the API instead of implementing the Kingshot signing flow themselves; the upstream signing secret remains server-side.
+
+**Base URL:** https://kingshot-autoredeemer.vercel.app/api/v1
+
+| Method | Endpoint | Authentication | Purpose |
+|---|---|---|---|
+| GET | `/api/v1` | None | API metadata |
+| GET | `/api/v1/health` | None | Health check |
+| POST | `/api/v1/redeem` | Bearer API key | Redeem a gift code |
+
+Example:
+
+```bash
+curl -X POST https://kingshot-autoredeemer.vercel.app/api/v1/redeem \\
+  -H "Authorization: Bearer ks_live_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"playerId":"123456789","kingdomId":"1125","code":"EXAMPLECODE"}'
+```
+
+API keys are stored as hashes and never returned after creation. Each key has its own daily quota, while the public API also has a short-window abuse guard. The developer API is an independent community interface, not an official Century Games API.
+
 ## Website
 
 **Production:** https://kingshot-autoredeemer.vercel.app/
