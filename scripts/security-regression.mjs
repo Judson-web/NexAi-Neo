@@ -47,7 +47,8 @@ assertCheck(
 assertCheck(
  "Worker shards use durable per-slot claims",
  auto.includes('rpc("claim_kingshot_worker_slot"') &&
- auto.includes('rpc("finish_kingshot_worker_slot"')
+ auto.includes('rpc("finish_kingshot_worker_slot"') &&
+ auto.includes("WORKER_REQUEST_TIMEOUT_MS=4*60*1000")
 );
 assertCheck(
  "Worker shard endpoint requires internal authorization",
@@ -57,7 +58,8 @@ assertCheck(
 assertCheck(
  "Worker pool preserves bounded per-shard concurrency",
  auto.includes("const PLAYER_CONCURRENCY=6;") &&
- auto.includes("runWithConcurrency(assigned,p=>redeemForPlayer(p,codes),PLAYER_CONCURRENCY)")
+ auto.includes("runWithConcurrency(assigned,p=>redeemForPlayer(p,codes),PLAYER_CONCURRENCY,{deadline})") &&
+ auto.includes("WORKER_MAX_RUNTIME_MS=4*60*1000")
 );
 assertCheck(
  "Global expired-code lookup fails open instead of crashing the worker",
