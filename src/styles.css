@@ -35,11 +35,13 @@
 
 /* Shared GitHub profile chip */
 .header-right{display:flex;align-items:center;gap:9px}
-.site-github-credit{flex:none}
+.site-github-credit{flex:none}.site-discord-credit{display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;min-width:0;max-width:130px;padding:4px 7px 4px 4px;border:1px solid #272a35;border-radius:999px;background:#11131a;color:#eef0f5;text-decoration:none;overflow:hidden}.site-discord-credit img{display:block;width:29px;height:29px;flex:0 0 29px;border-radius:50%;object-fit:cover}.site-discord-credit span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700}
 @media(max-width:680px){
  .header-right{gap:6px}
  .site-github-credit{padding:3px}
- .site-github-credit img{width:29px;height:29px}
+ .site-discord-credit{padding:3px}
+ .site-discord-credit img{width:29px;height:29px;flex-basis:29px}
+ .site-discord-credit span{display:none}
  .site-github-credit span,.site-github-credit svg{display:none}
 }
 
@@ -66,6 +68,7 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 }
 @media(max-width:380px){
  .site-github-credit img{width:27px;height:27px}
+ .site-discord-credit img{width:27px;height:27px;flex-basis:27px}
  .menu-btn{width:32px;height:32px}
 }
 
