@@ -405,8 +405,10 @@ async function redeemForPlayer(player,codes){
   }
  }
  const kingdomState=await ensureCurrentKingdom(player);
- if(kingdomState.stale)return {attempted:0,success:0,alreadyHandled:0,skipped:1,stale:1};
- if(!kingdomState.player?.kingdom_id)return {attempted:0,success:0,alreadyHandled:0,skipped:1,revalidationError:1};
+ const kingdomCheck=Boolean(kingdomState.revalidated);
+ const kingdomChanged=Boolean(kingdomState.kingdomChanged);
+ if(kingdomState.stale)return {attempted:0,success:0,alreadyHandled:0,skipped:1,stale:1,kingdomCheck,kingdomChanged};
+ if(!kingdomState.player?.kingdom_id)return {attempted:0,success:0,alreadyHandled:0,skipped:1,revalidationError:1,kingdomCheck,kingdomChanged};
  player=kingdomState.player;
  const history=await rpc("list_kingshot_player_redemptions",{p_player_id:player.player_id});
  const handled=new Set((Array.isArray(history)?history:[])
