@@ -291,6 +291,38 @@ async function ensureCurrentKingdom(player){
   throw error;
  }
 }
+async function revalidatePlayer(player){
+ try{
+  if(!player?.kingdom_id){
+   const fresh=await fetchCurrentKingshotPlayer(player.player_id);
+   if(fresh.notFound){
+    await rpc("mark_kingshot_player_stale",{p_player_id:player.player_id,p_reason:"MIGHTPULSE_PLAYER_NOT_FOUND"});
+    return {stale:true};
+   }
+   const p=fresh.player||{};
+   const currentKingdom=String(p.kid??p.kingdom_id??"").replace(/\D/g,"");
+   if(!currentKingdom)throw Error("MightPulse returned no kingdom for this player.");
+   const result=await rpc("record_kingshot_kingdom_revalidation",{
+    p_player_id:player.player_id,
+    p_kingdom_id:currentKingdom,
+    p_player_name:p.nick_name||p.name||p.nickname||null,
+    p_avatar_url:p.avatar_url||p.avatar||p.avatarUrl||null
+   });
+   player=result?.player||player;
+  }
+  const kingdomState=await ensureCurrentKingdom(player);
+  if(kingdomState.stale)return {stale:true};
+  return {
+   player:kingdomState.player||player,
+   revalidated:Boolean(kingdomState.revalidated),
+   kingdomChanged:Boolean(kingdomState.kingdomChanged)
+  };
+ }catch(error){
+  console.error("Kingshot player validation failed:",player?.player_id,error?.message||error);
+  return {revalidationError:1};
+ }
+}
+
 async function updateScraperHealth(source,codeCount,error=null){
  try{
   // Keep scraper health/history in Supabase, but do not spam Discord with
